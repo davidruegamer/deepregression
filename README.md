@@ -32,7 +32,7 @@ If you set up a Python environment for the first time, install `reticulate` and 
 Until published, please cite the following preprint:
 
     @article{rugamer2020unifying,
-      title={A Unifying Network Architecture for Semi-Structured Deep Distributional Learning},
+      title={Semi-Structured Deep Distributional Regression: Combining Structured Additive Models and Deep Learning},
       author={R{\"u}gamer, David and Kolb, Chris and Klein, Nadja},
       journal={arXiv preprint arXiv:2002.05777},
       year={2020}
@@ -40,11 +40,11 @@ Until published, please cite the following preprint:
 
 # How to use this?
 
-See [the tutorial](vignettes/tutorial.md) for a detailed introduction.
+See [the tutorial](https://arxiv.org/pdf/2104.02705.pdf) for a detailed introduction.
 
 # Python version
 
-A Python version of the package is available [here](https://github.com/davidruegamer/PySDDR). 
+A Python version of the package is available [here](https://github.com/HelmholtzAI-Consultants-Munich/PySDDR). 
 
 # Related literature
 
