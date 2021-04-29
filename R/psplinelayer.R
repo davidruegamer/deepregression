@@ -305,14 +305,21 @@ trainable_pspline = function(units, this_lambdas, this_mask, this_P, this_n, thi
                            P = this_P, n = this_n, nr = this_nr))
 }
 
-kerasGAM = function(inputs, outputs) {
+# kerasGAM = function(inputs, outputs) {
+#   python_path <- system.file("python", package = "deepregression")
+#   splines <- reticulate::import_from_path("psplines", path = python_path)
+#   
+#   return(splines$kerasGAM(inputs, outputs))
+# }
+
+build_kerasGAM = function(fsbatch_factor) {
   python_path <- system.file("python", package = "deepregression")
   splines <- reticulate::import_from_path("psplines", path = python_path)
   
-  return(splines$kerasGAM(inputs, outputs))
+  return(splines$build_kerasGAM(fsbatch_factor))
 }
 
-tf_incross <- function(w, P) {
+tf_incross = function(w, P) {
   python_path <- system.file("python", package = "deepregression")
   splines <- reticulate::import_from_path("psplines", path = python_path)
   

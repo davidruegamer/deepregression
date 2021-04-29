@@ -36,3 +36,9 @@ create_layer <- function (layer_class, object, args = list())
     layer
   else invisible(compose_layer(object, layer))
 }
+
+tib_layer = function(input_dim, use_bias, la) {
+  python_path <- system.file("python", package = "deepregression")
+  layers <- reticulate::import_from_path("TibLinearLasso", path = python_path)
+  layers$TibLinearLasso(input_dim = input_dim, use_bias = use_bias, la = la)
+}

@@ -54,8 +54,10 @@
 #' a custom distribution function.
 #' @param learning_rate learning rate for optimizer
 #' @param optimizer optimzer used. Per default ADAM.
-#' @param fsbatch_optimizer a special optimizer conducting a mini-batch variant of the 
+#' @param fsbatch_optimizer logical; use a special optimizer conducting a mini-batch variant of the 
 #' Fellner-Schall algorithm.
+#' @param fsbatch_factor a factor defining how much of the past is used for the Fellner-Schall
+#' algorithm; defaults to 0.01
 #' @param variational logical value specifying whether or not to use
 #' variational inference. If \code{TRUE}, details must be passed to
 #' the via the ellipsis to the initialization function
@@ -90,6 +92,7 @@
 #' @param offset_val a list analogous to offset for the validation data
 #' @param absorb_cons logical; adds identifiability constraint to the basisi.
 #' See \code{?mgcv::smoothCon} for more details.
+#' @param anisotropic whether or not use anisotropic smoothing (default is TRUE)
 #' @param zero_constraint_for_smooths logical; the same as absorb_cons,
 #' but done explicitly. If true a constraint is put on each smooth to have zero mean. Can
 #' be a vector of \code{length(list_of_formulae)} for each distribution parameter.
@@ -201,6 +204,7 @@ deepregression <- function(
   learning_rate = 0.01,
   optimizer = optimizer_adam(lr = learning_rate),
   fsbatch_optimizer = FALSE,
+  fsbatch_factor = 0.01,
   variational = FALSE,
   monitor_metric = list(),
   seed = 1991-5-4,
@@ -215,6 +219,7 @@ deepregression <- function(
   offset = NULL,
   offset_val = NULL,
   absorb_cons = FALSE,
+  anisotropic = TRUE,
   zero_constraint_for_smooths = TRUE,
   orthog_type = c("tf", "manual"),
   orthogonalize = TRUE,
@@ -360,6 +365,7 @@ deepregression <- function(
                                          lf = list_of_formulae[[i]],
                                          data = data,
                                          df = df[[i]],
+                                         anisotropic = anisotropic,
                                          variable_names = varnames,
                                          network_names = netnames,
                                          defaultSmoothing = defaultSmoothing,
@@ -562,6 +568,7 @@ deepregression <- function(
         extend_output_dim = extend_output_dim,
         offset = if(is.null(offset)) NULL else lapply(offset, NCOL0),
         additional_penalty = additional_penalty,
+        fsbatch_factor = fsbatch_factor
       )
       
       
@@ -587,7 +594,8 @@ deepregression <- function(
         lambda_ridge = lambda_ridge,
         monitor_metric = monitor_metric,
         optimizer = optimizer,
-        fsbatch_optimizer = fsbatch_optimizer,
+        # fsbatch_optimizer = fsbatch_optimizer,
+        # fsbatch_factor = fsbatch_factor,
         output_dim = output_dim,
         mixture_dist = mixture_dist,
         split_fun = split_fun,
@@ -726,7 +734,7 @@ deepregression_init <- function(
   weights = NULL,
   learning_rate = 0.01,
   optimizer = optimizer_adam(lr = learning_rate),
-  fsbatch_optimizer = FALSE,
+  # fsbatch_optimizer = FALSE,
   monitor_metric = list(),
   posterior = posterior_mean_field,
   prior = prior_trainable,
@@ -1166,6 +1174,8 @@ deepregression_init <- function(
 #' that takes the \code{model$trainable_weights} as input and applies the
 #' additional penalty. In order to get the correct index for the trainable
 #' weights, you can run the model once and check its structure.
+#' @param fsbatch_factor factor for Fellner-Schall algorithm, see 
+#' \code{?deepregression}
 #'
 #' @export
 dr_init <- function(
@@ -1182,7 +1192,8 @@ dr_init <- function(
   ind_fun = function(x) x,
   extend_output_dim = 0,
   offset = NULL,
-  additional_penalty = NULL
+  additional_penalty = NULL,
+  fsbatch_factor = 0.01
 )
 {
   
@@ -1342,6 +1353,8 @@ dr_init <- function(
                    unlist(offset_inputs[!sapply(offset_inputs, is.null)]))
     
   }
+  
+  kerasGAM <- build_kerasGAM(fsbatch_factor)
   
   # the final model is defined by its inputs
   # and outputs

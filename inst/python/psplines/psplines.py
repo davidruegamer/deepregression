@@ -137,43 +137,47 @@ def get_masks(mod):
             masks.append(layer.mask)
     return(masks)
 
-class kerasGAM(tf.keras.Model):
-    def train_step(self, data):
-        x, y = data
+def build_kerasGAM(fac = 0.01):
 
-        with tf.GradientTape() as t2:
-            with tf.GradientTape() as t1:
-                y_pred = self(x, training=True)  # Forward pass
-                # Compute our own loss
-                loss = self.compiled_loss(y, y_pred, regularization_losses=self.losses)
+    class kerasGAM(tf.keras.Model):
+        def train_step(self, data):
+            x, y = data
+
+            with tf.GradientTape() as t2:
+                with tf.GradientTape() as t1:
+                    y_pred = self(x, training=True)  # Forward pass
+                    # Compute our own loss
+                    loss = self.compiled_loss(y, y_pred, regularization_losses=self.losses)
 #                 H = tf.hessians(loss, y_pred)
 
-            # Compute gradients
-                trainable_vars = self.trainable_variables
-                beta_index = get_specific_weight(["pen_linear"], trainable_vars)
-                lambda_index = get_specific_weight(["lambda"], trainable_vars)
-                # not_lambda_index = get_specific_weight(["lambda"], trainable_vars, invert = True)
-                betas = trainable_vars[beta_index[0]]
-                lambdas = trainable_vars[lambda_index[0]]
+                # Compute gradients
+                    trainable_vars = self.trainable_variables
+                    beta_index = get_specific_weight(["pen_linear"], trainable_vars)
+                    lambda_index = get_specific_weight(["lambda"], trainable_vars)
+                    # not_lambda_index = get_specific_weight(["lambda"], trainable_vars, invert = True)
+                    betas = trainable_vars[beta_index[0]]
+                    lambdas = trainable_vars[lambda_index[0]]
                 
-            gradients = t1.gradient(loss, trainable_vars)
+                gradients = t1.gradient(loss, trainable_vars)
 
             # ====================================
 #             gradients_not_lambda = gradients[not_lambda_index]
-            gradients_betas = gradients[beta_index[0]]
+                gradients_betas = gradients[beta_index[0]]
             
             
-        H = tf.reshape(tf.stack(t2.jacobian(gradients_betas, betas)), [betas.shape[0],betas.shape[0]])
-        update = update_lambda(Plist, H, betas, lambdas, get_masks(self))
-        phi = self.compiled_loss(y, y_pred) / (y.shape[0] - tf.linalg.trace(update[1](tf_crossprod(x,x))))
-        fac = 0.01
-        lambdas.assign(phi*update[0]*fac + (1-fac)*lambdas)      
+            H = tf.reshape(tf.stack(t2.jacobian(gradients_betas, betas)), [betas.shape[0],betas.shape[0]])
+            update = update_lambda(Plist, H, betas, lambdas, get_masks(self))
+            phi = self.compiled_loss(y, y_pred) / (y.shape[0] - tf.linalg.trace(update[1](tf_crossprod(x,x))))
+            # fac = 0.01
+            lambdas.assign(phi*update[0]*fac + (1-fac)*lambdas)      
 
-        betas.assign(betas-update[1](gradients_betas))
-        # ====================================
+            betas.assign(betas-update[1](gradients_betas))
+            # ====================================
 
-        # Compute our own metrics
-        # loss_tracker.update_state(loss)
-        #  return {"loss": loss_tracker.result()}
+            # Compute our own metrics
+            # loss_tracker.update_state(loss)
+            #  return {"loss": loss_tracker.result()}
 
-        return()
+            return()
+            
+    return(kerasGAM)   
