@@ -1015,7 +1015,7 @@ sum_cols_smooth <- function(x)
   if(sum(byt)==0) return(sum(sapply(x, function(y) NCOL(y[[1]]$X))))
   if(sum(byt)==length(byt)) return(sum(sapply(x, sum_cols_smooth)))
   return(sum(sapply(x[byt], sum_cols_smooth)) +
-           sum(sapply(x, function(y) NCOL(y$X))))
+           sum(sapply(x[!byt], function(y) NCOL(y[[1]]$X))))
 
 }
 

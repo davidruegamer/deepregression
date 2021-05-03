@@ -503,7 +503,7 @@ predict.deeptrafo <- function(
     }
   }
 
-  trafo_fun <- function(y, type = c("trafo", "pdf", "cdf", "interaction", "shift", "output"),
+  trafo_fun <- function(y, type = c("trafo", "pdf", "cdf", "interaction", "shift", "output", "sample"),
                         which = NULL, grid = FALSE)
   {
     type <- match.arg(type)
@@ -584,7 +584,8 @@ predict.deeptrafo <- function(
                    grid_pdf = ((tfd_normal(0,1) %>% tfd_prob(grid_eval) %>%
                                   as.matrix)*as.matrix(grid_prime_eval)),
                    grid_cdf = (tfd_normal(0,1) %>% tfd_cdf(grid_eval) %>%
-                                 as.matrix)
+                                 as.matrix),
+                   sample
     )
 
     return(ret)

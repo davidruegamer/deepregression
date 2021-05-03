@@ -30,6 +30,7 @@ orthog_smooth <- function(pcf, zero_cons = TRUE){
 
   nml <- attr(pcf$linterms, "names")
   nms <- attr(pcf$smoothterms, "names")
+  re <- sapply(pcf$smoothterms, function(x) attr(x[[1]], "class")[[1]])=="random.effect"
   # if(!is.null(nms) && grepl(",by_",nms)){
   #   warning("Orthogonalization for s-terms with by-Term currently not supported.")
   # }
@@ -40,6 +41,7 @@ orthog_smooth <- function(pcf, zero_cons = TRUE){
 
     if(#"(Intercept)" %in% nml &
       !grepl("by", nm) &
+      !re[nm] &
       zero_cons)
     {
 

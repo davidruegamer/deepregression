@@ -125,7 +125,7 @@ get_layers_from_s <- function(this_param, nr=NULL, variational=FALSE,
     lambdas = c(lambdas, these_lambdas)
     these_Ps = lapply(this_param$smoothterms, function(x){ 
       
-      if(length(x[[1]]$S)==1) return(x[[1]]$S)
+      if(length(x[[1]]$S)==1 & is.null(x[[1]]$by.level)) return(x[[1]]$S)
       if(length(x[[1]]$S)==2 & !is.null(length(x[[1]]$margin))) return(x[[1]]$S)
       return(list(Matrix::bdiag(lapply(x,function(y)y$S[[1]]))))
       
