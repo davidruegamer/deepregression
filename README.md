@@ -29,13 +29,24 @@ If you set up a Python environment for the first time, install `reticulate` and 
 
 # How to cite this?
 
-Until published, please cite the following preprint:
+For the methodology, please cite the following preprint:
 
     @article{rugamer2020unifying,
       title={Semi-Structured Deep Distributional Regression: Combining Structured Additive Models and Deep Learning},
       author={R{\"u}gamer, David and Kolb, Chris and Klein, Nadja},
       journal={arXiv preprint arXiv:2002.05777},
       year={2020}
+    }
+    
+For the software, please cite:
+
+    @article{rugamer2021deepregression,
+      title={deepregression: a Flexible Neural Network Framework for Semi-Structured Deep Distributional Regression}, 
+      author={David R{\"u}gamer and Ruolin Shen and Christina Bukas and Lisa Barros de Andrade e Sousa and Dominik Thalmeier and Nadja Klein and Chris Kolb and Florian Pfisterer and Philipp Kopper and Bernd Bischl and Christian L. M{\"u}ller},
+      year={2021},
+      eprint={2104.02705},
+      archivePrefix={arXiv},
+      journal={arXiv preprint arXiv:2104.02705}
     }
 
 # How to use this?
