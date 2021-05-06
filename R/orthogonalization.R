@@ -1,3 +1,10 @@
+orthog_ncol = function(U, X) {
+  python_path <- system.file("python", package = "deepregression")
+  layers <- reticulate::import_from_path("layers", path = python_path)
+  
+  return(layers$orthog_col(U = U, X = X))
+}
+
 orthog_structured <- function(S,L)
 {
   qrL <- qr(L)

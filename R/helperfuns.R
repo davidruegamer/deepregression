@@ -245,7 +245,7 @@ get_contents <- function(lf, data, df,
                           network_names = network_names,
                           defaultSmoothing = defaultSmoothing))
     }
-    whatsleft <- setdiff(vars, variable_names)
+    whatsleft <- setdiff(vars, c(variable_names, "FALSE", "TRUE"))
     if(length(whatsleft) > 0){
       if(grepl(":", whatsleft))
         stop("Linear interactions such as ", whatsleft[1],
@@ -312,7 +312,7 @@ get_contents <- function(lf, data, df,
       lapply(sTerms,
              function(t) {
              smoothCon(eval(t),
-                         data=data.frame(data[unname(unlist(terms_w_s))]),
+                         data=data.frame(data[setdiff(unname(unlist(terms_w_s)), c("TRUE", "FALSE"))]),
                          knots=NULL, absorb.cons = absorb_cons,
                          null.space.penalty = null_space_penalty)
       })

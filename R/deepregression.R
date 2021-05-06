@@ -96,8 +96,10 @@
 #' @param zero_constraint_for_smooths logical; the same as absorb_cons,
 #' but done explicitly. If true a constraint is put on each smooth to have zero mean. Can
 #' be a vector of \code{length(list_of_formulae)} for each distribution parameter.
-#' @param orthog_type one of two types; if \code{"manual"}, the QR decomposition is calculated
-#' before model fitting, otherwise (\code{"tf"}) a QR is calculated in each batch iteration via TF.
+#' @param orthog_type one of three options; if \code{"col"}, the orthogonalization is applied
+#' on the column nullspace and will be done during fitting; the two other options operate
+#' on the row space and are. If \code{"manual"}, the QR decomposition is calculated before model fitting, 
+#' otherwise (\code{"tf"}) a QR is calculated in each batch iteration via TF.
 #' The first only works well for larger batch sizes or ideally batch_size == NROW(y).
 #' @param orthogonalize logical; if set to \code{FALSE}, orthogonalization is deactivated
 #' @param hat1 logical; if TRUE, the smoothing parameter is defined by the trace of the hat
@@ -221,7 +223,7 @@ deepregression <- function(
   absorb_cons = FALSE,
   anisotropic = TRUE,
   zero_constraint_for_smooths = TRUE,
-  orthog_type = c("tf", "manual"),
+  orthog_type = c("col", "tf", "manual"),
   orthogonalize = TRUE,
   hat1 = FALSE,
   sp_scale = NROW(y),
@@ -446,7 +448,7 @@ deepregression <- function(
                         olddata = data,
                         orthogonalize = orthogonalize,
                         retcol = FALSE,
-                        returnX = (orthog_type=="tf"))
+                        returnX = (orthog_type!="manual"))
   ox <- attr(input_cov, "ox")
   if(is.null(ox)) ox <- list(NULL)[rep(1, length(parsed_formulae_contents))]
   attr(input_cov, "ox") <- NULL
@@ -515,8 +517,10 @@ deepregression <- function(
   }
 
   # define orthogonalization function
-  if(orthog_type == "tf")
-    orthog_fun <- orthog_tf else orthog_fun <- orthog
+  orthog_fun <- switch(orthog_type,
+                       col = orthog_ncol,
+                       tf = orthog_tf,
+                       manual = orthog)
 
   orthogX <- NULL
   if(orthogonalize) orthogX <- nestNCOL(ox)
