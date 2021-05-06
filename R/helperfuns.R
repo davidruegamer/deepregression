@@ -1048,7 +1048,7 @@ remove_attr <- function(x)
 get_X_from_smooth <- function(sm, newdata)
 {
   
-  if(length(sm)==1 & sm[[1]]$by=="NA"){
+  if(length(sm)==1 & sm[[1]]$by=="NA" & !("random.effect" %in% attr(sm[[1]], "class"))){
     sm <- sm[[1]]
     sterms <- sm$term
     Lcontent <- sm$Lcontent
@@ -1067,6 +1067,10 @@ get_X_from_smooth <- function(sm, newdata)
             S = pm, P = NULL, L = thisL
           )
         )
+  }else if("random.effect" %in% attr(sm[[1]], "class")){
+    sterms <- sm[[1]]$term
+    pm <- PredictMat(sm[[1]],as.data.frame(newdata[sterms]))
+    return(pm)
   }else{
     sterms <- c(sm[[1]]$term, sm[[1]]$by)
     do.call("cbind", lapply(sm, function(smm)

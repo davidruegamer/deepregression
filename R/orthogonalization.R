@@ -41,9 +41,10 @@ orthog_smooth <- function(pcf, zero_cons = TRUE){
   # if(!is.null(nms) && grepl(",by_",nms)){
   #   warning("Orthogonalization for s-terms with by-Term currently not supported.")
   # }
-  L <- NULL
   for(nm in nms){
 
+    L <- NULL
+    
     Lcontent <- c()
 
     if(#"(Intercept)" %in% nml &
@@ -57,7 +58,7 @@ orthog_smooth <- function(pcf, zero_cons = TRUE){
 
     }
 
-    if(nm %in% nml){
+    if(nm %in% nml & !re[nm]){
 
       if(!is.null(L))
         L <- cbind(L, pcf$linterms[,nm]) else

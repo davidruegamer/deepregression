@@ -205,7 +205,7 @@ reshape_softplus_cumsum <- function(x, order_bsp_p1)
 correct_min_val <- function(pcf, addconst = 10)
 {
 
-  minval <- suppressWarnings(min(pcf$linterms))
+  minval <- suppressWarnings(min(pcf$linterms[,sapply(pcf$linterms, is.numeric)]))
   if(!is.null(pcf$smoothterms))
     minval <- min(c(minval, 
                     suppressWarnings(sapply(pcf$smoothterms,
@@ -216,7 +216,8 @@ correct_min_val <- function(pcf, addconst = 10)
     minval <- minval - addconst
     
     if(!is.null(pcf$linterms))
-      pcf$linterms <- pcf$linterms - minval
+      pcf$linterms[,sapply(pcf$linterms, is.numeric)] <- 
+        pcf$linterms[,sapply(pcf$linterms, is.numeric)] - minval
     if(!is.null(pcf$smoothterms))
       pcf$smoothterms <- lapply(pcf$smoothterms, function(x){
         x[[1]]$X <- x[[1]]$X - minval

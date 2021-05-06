@@ -21,7 +21,6 @@ deepregression_init(
   weights = NULL,
   learning_rate = 0.01,
   optimizer = optimizer_adam(lr = learning_rate),
-  fsbatch_optimizer = FALSE,
   monitor_metric = list(),
   posterior = posterior_mean_field,
   prior = prior_trainable,
@@ -87,8 +86,6 @@ the via the ellipsis to the initialization function}
 
 \item{optimizer}{optimizer used (defaults to adam)}
 
-\item{fsbatch_optimizer}{logical; see \code{?deepregression}}
-
 \item{monitor_metric}{see \code{?deepregression}}
 
 \item{posterior}{function defining the posterior}
@@ -122,6 +119,8 @@ weights, you can run the model once and check its structure.}
 \item{constraint_fun}{function; a constraint for the linear layers}
 
 \item{compile_model}{logical; whether to compile the model (default is TRUE)}
+
+\item{fsbatch_optimizer}{logical; see \code{?deepregression}}
 }
 \description{
 Initializing Deep Distributional Regression Models

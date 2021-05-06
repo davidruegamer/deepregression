@@ -30,6 +30,7 @@ deepregression(
   learning_rate = 0.01,
   optimizer = optimizer_adam(lr = learning_rate),
   fsbatch_optimizer = FALSE,
+  fsbatch_factor = 0.01,
   variational = FALSE,
   monitor_metric = list(),
   seed = 1991 - 5 - 4,
@@ -44,8 +45,9 @@ deepregression(
   offset = NULL,
   offset_val = NULL,
   absorb_cons = FALSE,
+  anisotropic = TRUE,
   zero_constraint_for_smooths = TRUE,
-  orthog_type = c("tf", "manual"),
+  orthog_type = c("col", "tf", "manual"),
   orthogonalize = TRUE,
   hat1 = FALSE,
   sp_scale = NROW(y),
@@ -136,8 +138,11 @@ a custom distribution function.}
 
 \item{optimizer}{optimzer used. Per default ADAM.}
 
-\item{fsbatch_optimizer}{a special optimizer conducting a mini-batch variant of the 
+\item{fsbatch_optimizer}{logical; use a special optimizer conducting a mini-batch variant of the 
 Fellner-Schall algorithm.}
+
+\item{fsbatch_factor}{a factor defining how much of the past is used for the Fellner-Schall
+algorithm; defaults to 0.01}
 
 \item{variational}{logical value specifying whether or not to use
 variational inference. If \code{TRUE}, details must be passed to
@@ -187,12 +192,16 @@ if NULL, no offset is used}
 \item{absorb_cons}{logical; adds identifiability constraint to the basisi.
 See \code{?mgcv::smoothCon} for more details.}
 
+\item{anisotropic}{whether or not use anisotropic smoothing (default is TRUE)}
+
 \item{zero_constraint_for_smooths}{logical; the same as absorb_cons,
 but done explicitly. If true a constraint is put on each smooth to have zero mean. Can
 be a vector of \code{length(list_of_formulae)} for each distribution parameter.}
 
-\item{orthog_type}{one of two types; if \code{"manual"}, the QR decomposition is calculated
-before model fitting, otherwise (\code{"tf"}) a QR is calculated in each batch iteration via TF.
+\item{orthog_type}{one of three options; if \code{"col"}, the orthogonalization is applied
+on the column nullspace and will be done during fitting; the two other options operate
+on the row space and are. If \code{"manual"}, the QR decomposition is calculated before model fitting, 
+otherwise (\code{"tf"}) a QR is calculated in each batch iteration via TF.
 The first only works well for larger batch sizes or ideally batch_size == NROW(y).}
 
 \item{orthogonalize}{logical; if set to \code{FALSE}, orthogonalization is deactivated}
@@ -240,9 +249,10 @@ Fitting Semi-Structured Deep Distributional Regression
 \examples{
 library(deepregression)
 
-data = data.frame(matrix(rnorm(10*100), c(100,10)))
-colnames(data) <- c("x1","x2","x3","xa","xb","xc","xd","xe","xf","unused")
-formula <- ~ 1 + deep_model(x1,x2,x3) + s(xa, sp = 1) + x1
+n <- 1000
+data = data.frame(matrix(rnorm(4*n), c(n,4)))
+colnames(data) <- c("x1","x2","x3","xa")
+formula <- ~ 1 + deep_model(x1,x2,x3) + s(xa) + x1
 
 deep_model <- function(x) x \%>\%
 layer_dense(units = 32, activation = "relu", use_bias = FALSE) \%>\%
@@ -250,14 +260,19 @@ layer_dropout(rate = 0.2) \%>\%
 layer_dense(units = 8, activation = "relu") \%>\%
 layer_dense(units = 1, activation = "linear")
 
-y <- rnorm(100)
+y <- rnorm(n) + data$xa^2 + data$x1
 
-mod <- deepregression(list_of_formulae = list(loc = formula, scale = ~ 1),
-data = data, validation_data = list(data, y), y = y,
-list_of_deep_models = list(deep_model = deep_model), tf_seed = 1)
+mod <- deepregression(
+  list_of_formulae = list(loc = formula, scale = ~ 1),
+  data = data, validation_data = list(data, y), y = y,
+  list_of_deep_models = list(deep_model = deep_model), 
+  df = 6, 
+  tf_seed = 1
+)
 
-# train for 10 epochs to get a better model
-mod \%>\% fit(epochs = 10)
+# train for more than 10 epochs to get a better model
+mod \%>\% fit(epochs = 10, early_stopping = TRUE)
 mod \%>\% plot()
+mod \%>\% coef()
 
 }
