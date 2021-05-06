@@ -532,6 +532,13 @@ deepregression <- function(
     input_cov <- c(input_cov,
                    list(y_basis_fun(y),
                         y_basis_fun_prime(y)))
+    
+    if(!is.null(validation_data))
+      validation_data <- list(unname(
+        c(validation_data[[1]], 
+          list(y_basis_fun(validation_data[[2]]),
+               y_basis_fun_prime(validation_data[[2]])))
+      ), validation_data[[2]])
 
     model <- deeptransformation_init(
       n_obs = n_obs,

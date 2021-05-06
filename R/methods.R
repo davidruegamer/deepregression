@@ -670,7 +670,7 @@ fit <- function (x, ...) {
 #' @param patience integer, number of rounds after which early stopping is done.
 #' @param save_weights logical, whether to save weights in each epoch.
 #' @param auc_callback logical, whether to use a callback for AUC
-#' @param val_data optional specified validation data
+#' @param validation_data optional specified validation data
 #' @param callbacks a list of callbacks for fitting
 #' @param convertfun function to convert R into Tensor object
 #' @param ... further arguments passed to
@@ -690,7 +690,7 @@ fit.deepregression <- function(
   patience = 20,
   save_weights = FALSE,
   auc_callback = FALSE,
-  val_data = NULL,
+  validation_data = NULL,
   callbacks = list(),
   convertfun = function(x) tf$constant(x, dtype="float32"),
   ...
@@ -710,9 +710,9 @@ fit.deepregression <- function(
 
   if(auc_callback){
 
-    if(is.null(val_data)) stop("Must provide validation data via argument val_data.")
-    if(is.data.frame(val_data[[1]])) val_data[[1]] <- as.list(val_data[[1]])
-    val_data_processed <- prepare_data(x, val_data[[1]], pred=TRUE)
+    if(is.null(validation_data)) stop("Must provide validation data via argument val_data.")
+    if(is.data.frame(validation_data[[1]])) validation_data[[1]] <- as.list(validation_data[[1]])
+    val_data_processed <- prepare_data(x, validation_data[[1]], pred=TRUE)
 
     auc_cb <- auc_roc$new(training = list(unname(x$init_params$input_cov), x$init_params$y),
                           validation = list(unname(val_data_processed), val_data[[2]]))
