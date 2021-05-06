@@ -161,7 +161,9 @@ make_orthog <- function(
             ]]
           
           if(is.null(newdata)){ 
-            this_sX <- this_smooth[[1]]$X
+            if(length(this_smooth)==1)
+              this_sX <- this_smooth[[1]]$X else
+                this_sX <- this_smooth$X
           }else{
             this_sX <- get_X_from_smooth(this_smooth, newdata)
           }
@@ -192,7 +194,9 @@ make_orthog <- function(
             this_smooth <- pcf$smoothterms[[tpi]]
             
             if(is.null(newdata)){ 
-              this_sX <- this_smooth[[1]]$X
+              if(length(this_smooth)==1)
+                this_sX <- this_smooth[[1]]$X else
+                  this_sX <- this_smooth$X
             }else{
               this_sX <- get_X_from_smooth(this_smooth, newdata)
             }
