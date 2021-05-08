@@ -1522,7 +1522,8 @@ deeptransformation_init <- function(
   addconst_interaction = NULL,
   penalize_bsp = 0,
   order_bsp_penalty = 2,
-  base_distribution = "normal"
+  base_distribution = "normal",
+  batch_shape = NULL
 )
 {
 
@@ -1531,17 +1532,23 @@ deeptransformation_init <- function(
   # if(length(list_deep)==1 & is.null(list_deep[[1]]))
   #   list_deep <- list_deep[rep(1,2)]
 
+  if(!is.null(batch_shape)) shape <- NULL else{
+    
+    if(sum(unlist(nc))!=0){
+      if(is.list(nc) & length(nc)>1)
+        shape <- list(as.integer(sum(unlist(nc)))) else if(is.list(nc) & length(nc)==1)
+          shape <- as.list(as.integer(nc[[1]]))
+    }     
+  }
+  
   # define the input layers
   inputs_deep <- lapply(ncol_deep, function(param_list){
     if(is.list(param_list) & length(param_list)==0) return(NULL)
     lapply(param_list, function(nc){
-      if(sum(unlist(nc))==0) return(NULL) else{
-        if(is.list(nc) & length(nc)>1){
-          layer_input(shape = list(as.integer(sum(unlist(nc)))))
-        }else if(is.list(nc) & length(nc)==1){
-          layer_input(shape = as.list(as.integer(nc[[1]])))
-        }else stop("Not implemented yet.")
-      }
+      if(sum(unlist(nc))==0) return(NULL) else return(
+        layer_input(shape = shape,
+                    batch_shape = batch_shape)
+        )
     })
   })
 
