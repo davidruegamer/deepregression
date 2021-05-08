@@ -42,3 +42,35 @@ tib_layer = function(input_dim, use_bias, la) {
   layers <- reticulate::import_from_path("TibLinearLasso", path = python_path)
   layers$TibLinearLasso(input_dim = input_dim, use_bias = use_bias, la = la)
 }
+
+tp_layer = function(a, b, pen=NULL, name=NULL) {
+  x <- tf_row_tensor(a, b) %>% 
+    layer_dense(units = 1, activation = "linear", 
+                name = name, use_bias = FALSE, 
+                kernel_regularizer = pen)
+  return(x)
+}
+
+ttp_layer = function(a, b, c, pen=NULL, name = NULL) {
+  x <- tf_row_tensor(tf_row_tensor(a, b), c) %>% 
+    layer_dense(units = 1, activation = "linear", 
+                name = name, use_bias = FALSE, 
+                kernel_regularizer = pen)
+  return(x)
+}
+
+vc_block <- function(ncolNum, levFac, penalty = NULL, name = NULL){
+  ret_fun <- function(x) tp_layer(x[,as.integer(1:ncolNum)],
+                                  tf$one_hot(tf$cast(x[,as.integer((ncolNum+1))], dtype="int32"), 
+                                             depth=levFac), pen=penalty, name=name)
+  return(ret_fun)
+}
+
+vvc_block <- function(ncolNum, levFac1, levFac2, penalty = NULL, name = NULL){
+  ret_fun <- function(x) ttp_layer(x[,as.integer(1:ncolNum)],
+                                  tf$one_hot(tf$cast(x[,as.integer((ncolNum+1))], dtype="int32"), 
+                                             depth=levFac1),
+                                  tf$one_hot(tf$cast(x[,as.integer((ncolNum+2))], dtype="int32"), 
+                                             depth=levFac2), pen=penalty, name=name)
+  return(ret_fun)
+}

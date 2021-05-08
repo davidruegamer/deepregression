@@ -325,3 +325,17 @@ tf_incross = function(w, P) {
   
   return(splines$tf_incross(w, P))
 }
+
+tp_penalty <- function(P1,P2,lambda1,lambda2=NULL)
+{
+  
+  if(is.null(lambda2)) lambda2 <- lambda1
+  return(lambda1 * kronecker(P1, diag(ncol(P2))) + lambda2 * kronecker(diag(ncol(P2)), P1))
+  
+}
+
+quadpen <- function(P){
+  retfun <- function(w) tf$reduce_sum(tf$matmul(
+    tf$matmul(tf$transpose(w), tf$cast(P, "float32")), w))
+  return(retfun)
+}

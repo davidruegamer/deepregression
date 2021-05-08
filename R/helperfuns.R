@@ -176,11 +176,12 @@ get_contents <- function(lf, data, df,
                          hat1 = TRUE,
                          sp_scale = 1, 
                          anisotropic = TRUE,
-                         image_var = list())
+                         image_var = list(),
+                         nr_param)
   {
   # extract which parts are modelled as deep parts
   # which by smooths, which linear
-  specials <- c("s", "te", "ti", network_names)
+  specials <- c("s", "te", "ti", network_names, "vc", "vvc")
   tf <- terms.formula(lf, specials=specials, data=data)
 
   if(length(attr(tf, "term.labels"))==0){
@@ -507,6 +508,53 @@ get_contents <- function(lf, data, df,
 
   ##################################### deep end #########################################
 
+  ##################################### VCs ##############################################
+  
+  if(!is.null(attr(tf, "specials")$vc) | !is.null(attr(tf, "specials")$vvc)){
+       
+    if(!is.null(attr(tf, "specials")$vvc))
+      stop("Not implemented yet.")
+    
+    vclist <- lapply(attr(tf, "specials")$vc, function(i){
+      
+      org_vars <- extract_from_special(list(terms[[i]]))
+      org_vars_org <- org_vars
+      lambdasind <- grepl("lambda\\s*=", org_vars)
+      if(any(lambdasind)){
+        lambdas <- gsub(".*(lambda\\s*=\\s*c\\(.*\\))\\)||,.*\\)", "\\1", deparse(terms[[i]]))
+        org_vars <- org_vars[!lambdasind]
+        eval(parse(text=lambdas))
+      }else{
+        lambda <- 1
+      }
+      num <- smoothCon(eval(parse(text = paste0("s(", paste(org_vars[-2], collapse=", "), ")"))),
+                       data = as.data.frame(data[org_vars[1]]))[[1]]
+      fac <- data[[org_vars[2]]]
+      stopifnot(is.integer(fac) | is.factor(fac))
+      if(is.factor(fac)) nlev <- nlevels(fac) else{
+        nlev <- unique(fac)
+        warning("Assuming that the factor in ", deparse(terms[[i]]), " contains all levels.")
+      }
+      fac <- as.integer(fac)-1
+      vcterms <- list(cbind(num$X, fac))
+      names(vcterms)
+      Ptp <- do.call("tp_penalty", c(list(num$S[[1]], diag(rep(1,nlev))), as.list(lambda)))
+      names(vcterms) <- gsub("\\s|\\)","", gsub("\\(|,|=", "_",  deparse(terms[[i]])))
+      attr(vcterms, "layer") <- vc_block(ncol(num$X), nlev, penalty=quadpen(Ptp), 
+                                         name=paste0("tp_layer_", nr_param, "_", i))
+      return(vcterms)
+    })
+    
+    names(vclist) <- sapply(terms[attr(tf, "specials")$vc], 
+                            function(x) gsub("\\s|\\)","", gsub("\\(|,|=", "_",  deparse(x))))
+    
+    if(is.null(deepterms)) deepterms <- vclist else
+      deepterms <- c(deepterms, vclist)
+    
+  }
+  
+  ##################################### VCs end ##########################################
+  
   ret <- list(linterms = linterms,
               smoothterms = smoothterms,
               deepterms = deepterms)

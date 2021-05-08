@@ -119,7 +119,8 @@
 #' If > 0, the minimum value plus the \code{addconst_interaction} is added to each predictor
 #' in the interaction term.
 #' @param additional_penalty a penalty that is added to the negative log-likelihood; must be
-#' a function of the keras model's \code{trainable_weights} (including necessary subsetting)
+#' a function of the keras model's \code{trainable_weights} (including necessary subsetting) which
+#' is always called \code{model}
 #' @param penalty_summary keras function; summary function for the penalty in the spline layer;
 #' default is \code{k_sum}. Another option could be \code{k_mean}.
 #' @param convertfun function to convert objects into a matrix or tensor format.
@@ -297,6 +298,8 @@ deepregression <- function(
     stop("If specified, train_together must be of same length as list_of_formulae.")
   # get names of networks
   netnames <- names(list_of_deep_models)
+  if("vc" %in% netnames | "vvc" %in% netnames)
+    stop("Please rename networks in the list of deep models with name 'vc' or 'vvc'.")
   if(is.null(netnames) & length(list_of_deep_models) > 0)
     netnames <- "d"
   if(!is.null(list_of_deep_models) && is.null(names(list_of_deep_models)))
@@ -375,10 +378,20 @@ deepregression <- function(
                                          null_space_penalty = null_space_penalty,
                                          hat1 = hat1,
                                          sp_scale = sp_scale,
-                                         image_var = image_var
+                                         image_var = image_var,
+                                         nr_param = i
                                        )
   )
   cat(" Done.\n")
+  
+  # extract vc layers
+  for(i in 1:length(parsed_formulae_contents)){
+    has_layer <- sapply(parsed_formulae_contents[[i]]$deepterms, function(x) !is.null(attr(x, "layer")))
+    if(any(has_layer)){
+      list_of_deep_models <- c(list_of_deep_models, 
+                               lapply(parsed_formulae_contents[[i]]$deepterms[has_layer], function(x)attr(x,"layer")))
+    }
+  }
 
   # check for zero ncol linterms
   for(i in 1:length(parsed_formulae_contents)){
@@ -940,7 +953,8 @@ deepregression_init <- function(
   #        "a deep model must be provided for each parameter."))
   deep_split <- lapply(ncol_deep[1:nr_params], function(param_list){
     lapply(names(param_list), function(nn){
-      if(is.null(nn)) return(NULL) else
+      if(is.null(nn)) return(NULL) else if(grepl("^vc_.*",nn)) return(list(list_deep[[nn]],
+                                                                           function(x) x)) else
         split_fun(list_deep[[nn]])
     })
   })
@@ -960,8 +974,9 @@ deepregression_init <- function(
   deep_parts <- lapply(1:length(list_deep), function(i)
     if(is.null(inputs_deep[[i]]) | length(inputs_deep[[i]])==0)
       return(NULL) else
-        lapply(1:length(list_deep[[i]]), function(j)
-          list_deep[[i]][[j]](inputs_deep[[i]][[j]])))
+        lapply(1:length(list_deep[[i]]), function(j) return(
+          list_deep[[i]][[j]](inputs_deep[[i]][[j]]))
+          ))
 
   ############################################################
   ################# Apply Orthogonalization ##################
