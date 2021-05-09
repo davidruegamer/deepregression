@@ -59,10 +59,29 @@ ttp_layer = function(a, b, c, pen=NULL, name = NULL) {
   return(x)
 }
 
+tf_stride_cols <- function(A, start, end=NULL)
+{
+  
+  if(is.null(end)) end <- start
+  return(
+    #tf$strided_slice(A, c(0L,as.integer(start-1)), c(tf$shape(A)[1], as.integer(end)))
+    tf$keras$layers$Lambda(function(x) x[,as.integer(start):as.integer(end)])(A)
+    )
+  
+
+}
+    
 vc_block <- function(ncolNum, levFac, penalty = NULL, name = NULL){
-  ret_fun <- function(x) tp_layer(x[,as.integer(1:ncolNum)],
-                                  tf$one_hot(tf$cast(x[,as.integer((ncolNum+1))], dtype="int32"), 
-                                             depth=levFac), pen=penalty, name=name)
+  ret_fun <- function(x){ 
+    
+    a = tf_stride_cols(x, 1, ncolNum)
+    b = tf$one_hot(tf$cast(
+      (tf_stride_cols(x, ncolNum+1)[,1]), 
+      dtype="int32"), 
+      depth=levFac)
+    return(tp_layer(a, b, pen=penalty, name=name))
+    
+  }
   return(ret_fun)
 }
 
