@@ -313,7 +313,8 @@ get_contents <- function(lf, data, df,
       lapply(sTerms,
              function(t) {
              smoothCon(eval(t),
-                         data=data.frame(data[setdiff(unname(unlist(terms_w_s)), c("TRUE", "FALSE"))]),
+                         data=data.frame(data[setdiff(unname(unlist(terms_w_s)), 
+                                                      c("TRUE", "FALSE"))]),
                          knots=NULL, absorb.cons = absorb_cons,
                          null.space.penalty = null_space_penalty)
       })
@@ -332,7 +333,8 @@ get_contents <- function(lf, data, df,
     # check correct length when df is a vector
     smooths_w_pen <- sapply(smoothterms,function(x) is.null(x[[1]]$sp))
     if(length(df)>1)
-      stopifnot(sum(smooths_w_pen)==length(df)) else if(length(smoothterms)>1 & sum(smooths_w_pen)>0)
+      stopifnot(sum(smooths_w_pen)==length(df)) else if(length(smoothterms)>1 & 
+                                                        sum(smooths_w_pen)>0)
         df <- as.list(rep(df, sum(smooths_w_pen)))
 
     if(!is.list(df))
@@ -362,7 +364,7 @@ get_contents <- function(lf, data, df,
           X <- st[[1]]$X 
           if(is.list(S) && length(S)>1){
             if(null_space_penalty) S <- S[[1]]+S[[2]] else
-                stop("Something went wrong with the Dimensions of smoothing penalty matrices.")
+                stop("Wrong dimensions of smoothing penalty matrices.")
           }
         }else{ 
           if(anisotropic){
@@ -515,36 +517,8 @@ get_contents <- function(lf, data, df,
     if(!is.null(attr(tf, "specials")$vvc))
       stop("Not implemented yet.")
     
-    vclist <- lapply(attr(tf, "specials")$vc, function(i){
-      
-      org_vars <- extract_from_special(list(terms[[i]]))
-      org_vars_org <- org_vars
-      lambdasind <- grepl("lambda\\s*=", org_vars)
-      if(any(lambdasind)){
-        lambdas <- gsub(".*(lambda\\s*=\\s*c\\(.*\\))\\)||,.*\\)", "\\1", deparse(terms[[i]]))
-        org_vars <- org_vars[!lambdasind]
-        eval(parse(text=lambdas))
-      }else{
-        lambda <- 1
-      }
-      num <- smoothCon(eval(parse(text = paste0("s(", paste(org_vars[-2], collapse=", "), ")"))),
-                       data = as.data.frame(data[org_vars[1]]))[[1]]
-      fac <- data[[org_vars[2]]]
-      stopifnot(is.integer(fac) | is.factor(fac))
-      if(is.factor(fac)) nlev <- nlevels(fac) else{
-        nlev <- unique(fac)
-        warning("Assuming that the factor in ", deparse(terms[[i]]), " contains all levels.")
-      }
-      fac <- as.integer(fac)-1
-      vcterms <- list(cbind(num$X, fac))
-      names(vcterms)
-      Ptp <- do.call("tp_penalty", c(list(num$S[[1]], diag(rep(1,nlev))), as.list(lambda)))
-      names(vcterms) <- gsub("\\s|\\)","", gsub("\\(|,|=", "_",  deparse(terms[[i]])))
-      attr(vcterms, "layer") <- vc_block(ncol(num$X), nlev, penalty=quadpen(Ptp), 
-                                         name=paste0("tp_layer_", nr_param, "_", i))
-      return(vcterms)
-    })
-    
+    vclist <- lapply(attr(tf, "specials")$vc, function(i) 
+      build_vc(terms[[i]], data, name = paste0("tp_layer_", nr_param, "_", i)))
     names(vclist) <- sapply(terms[attr(tf, "specials")$vc], 
                             function(x) gsub("\\s|\\)","", gsub("\\(|,|=", "_",  deparse(x))))
     
@@ -598,19 +572,26 @@ make_cov <- function(pcf,
   }else{
     input_cov <- lapply(pcf, function(x){
       if(length(intersect(sapply(x$deepterms,
-                                 function(y) names(y)),names(newdata)))>0){
+                                 function(y) names(y)),names(newdata)))>0 | 
+         any(sapply(x$deepterms,function(x)class(x)[1])=="vcdata")){
         ret <- lapply(x$deepterms, function(y){
           if(is.data.frame(y)){
             return(as.data.frame(newdata[names(y)]))
+          }else if("vcdata" %in% class(y)){
+            return(newdata_vc(y, newdata))
           }else{
             return(newdata[names(y)])
           }
         })
+        
+        return(ret)
 
       }else if(is.list(x$deepterms) & all(sapply(x$deepterms, class)=="data.frame")){
 
         return(lapply(x$deepterms, function(y) data.frame(newdata[names(y)])))
-
+# 
+#       }else if(is.list(x$deepterms) & ){  
+        
       }else{ return(NULL) }
     })
   }
@@ -632,36 +613,8 @@ make_cov <- function(pcf,
       ret <- get_X_from_linear(x$linterms, newdata = newdata)
     if(!is.null(x$smoothterms))
     {
-      # put all terms that
-      # names_sTerms <- names(x$smoothterms)
-      # byfac <- intersect(names(newdata),
-      #                    unique(gsub(".*,by_(.*)([0-9]+)$","\\1", names_sTerms)))
-      # if(length(byfac)>0){
-      #   tog_list <- vector("list", length(byfac))
-      #   for(j in 1:length(byfac)){
-      #     bf <- byfac[j]
-      #     byf <- paste0(",by_", bf)
-      #     these_s <- grepl(byf, names(x$smoothterms))
-      #     var_before <- unique(gsub(paste0("(.*)",byf,".*"),"\\1",
-      #                               names(x$smoothterms)))
-      #     tog_list[[j]] <- vector("list", length(var_before))
-      #     for(k in 1:length(var_before)){
-      #       vb <- var_before[k]
-      #       these_s_v <- grepl(paste0(vb,",by_",bf), names(x$smoothterms))
-      #       tog_list[[j]][[k]] <- which(these_s & these_s_v)
-      #     }
-      #   }
-      #   tog_list <- unlist(tog_list, recursive = F)
-      #   xsm <- x$smoothterms[!these_s]
-      #   for(tl in tog_list){
-      #     xsm <- c(xsm, list(x$smoothterms[tl]))
-      #   }
-      # }
       if(!is.null(newdata)){
         Xp <- lapply(x$smoothterms, function(sm) get_X_from_smooth(sm, newdata))
-        # }else if(!is.null(newdata) & pred){
-        #   Xp <- lapply(pcfnew[[i]]$smoothterms, function(x)
-        #     do.call("cbind", lapply(x, "[[", "X")))
       }else{
         Xp <- lapply(x$smoothterms, function(x)
           do.call("cbind", lapply(x, "[[", "X")))
@@ -741,6 +694,47 @@ make_cov <- function(pcf,
   return(input_cov)
 
 }
+
+build_vc <- function(term, data, name){
+  
+  org_vars <- extract_from_special(list(term))
+  org_vars_org <- org_vars
+  lambdasind <- grepl("lambda\\s*=", org_vars)
+  if(any(lambdasind)){
+    lambdas <- gsub(".*(lambda\\s*=\\s*c\\(.*\\))\\)||,.*\\)", "\\1", deparse(term))
+    org_vars <- org_vars[!lambdasind]
+    eval(parse(text=lambdas))
+  }else{
+    lambda <- 1
+  }
+  num <- smoothCon(eval(parse(text = paste0("s(", paste(org_vars[-2], collapse=", "), ")"))),
+                   data = as.data.frame(data[org_vars[1]]))
+  fac <- data[[org_vars[2]]]
+  if(!is.factor(fac)) stop("The by-term of vc terms must be a factor variable.")
+  nlev <- nlevels(fac)
+  fac <- as.integer(fac)-1
+  vcterms <- list(cbind(num[[1]]$X, fac))
+  names(vcterms)
+  Ptp <- do.call("tp_penalty", c(list(num[[1]]$S[[1]], diag(rep(1,nlev))), as.list(lambda)))
+  names(vcterms) <- gsub("\\s|\\)","", gsub("\\(|,|=", "_",  deparse(term)))
+  attr(vcterms, "layer") <- vc_block(ncol(num[[1]]$X), nlev, penalty=quadpen(Ptp), 
+                                     name=name)
+  attr(vcterms, "org_features") <- org_vars_org[1:2]
+  attr(vcterms, "smterm") <- num
+  class(vcterms) <- c("vcdata", "list")
+  return(vcterms)
+  
+}
+
+newdata_vc <- function(vcobj, newdata)
+{
+  
+  pm <- PredictMat(attr(vcobj, "smterm")[[1]],
+                   as.data.frame(newdata[attr(vcobj, "org_features")[1]]))
+  return(cbind(pm, as.integer(newdata[[attr(vcobj, "org_features")[2]]])-1))
+  
+}
+
 
 get_names <- function(x)
 {
