@@ -194,6 +194,7 @@ deepregression <- function(
   df = NULL,
   lambda_lasso = NULL,
   lambda_ridge = NULL,
+  convert_factors = FALSE,
   # defaultSp = 1,
   # defaultSmoothing = function(smoothTerm){
   #   smoothTerm$sp = defaultSp
@@ -361,6 +362,9 @@ deepregression <- function(
   if(length(image_var)>0 & (
     !is.list(image_var) | is.null(names(image_var))))
     stop("image_var must be a named list with lists as elements.")
+  
+  # if(convert_factors)
+  #   data <- fac_to_int_representation(data)
   
   cat("Preparing additive formula(e)...")
   # parse formulae

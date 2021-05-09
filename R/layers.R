@@ -93,3 +93,16 @@ vvc_block <- function(ncolNum, levFac1, levFac2, penalty = NULL, name = NULL){
                                              depth=levFac2), pen=penalty, name=name)
   return(ret_fun)
 }
+
+layer_factor <- function(nlev, units = 1, activation = "linear", use_bias = FALSE, name = NULL,
+                         kernel_regularizer = NULL)
+{
+  
+  function(x) tf$one_hot(tf$cast(x[,1], dtype="int32"), depth=nlev) %>% layer_dense(
+    units = units,
+    activation = activation,
+    use_bias = use_bias,
+    name = name,
+    kernel_regularizer = kernel_regularizer)
+  
+}

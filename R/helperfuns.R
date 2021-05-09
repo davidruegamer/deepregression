@@ -165,6 +165,19 @@ NCOL0 <- function(x)
 #   xu
 # }
 
+fac_to_int_representation <- function(data)
+{
+  
+  whfac <- sapply(data, is.factor)
+  if(all(!whfac)) return(data)
+  faclist <- lapply(data[which(whfac)], function(x) list(nlev=nlevels(x), lev = levels(x)))
+  names(faclist) <- names(whfac[whfac])
+  data[whfac] <- lapply(data[whfac], function(x) as.integer(x)-1L)
+  attr(data, "faclist") <- faclist
+  return(data)
+  
+}
+
 # get contents from formula
 get_contents <- function(lf, data, df,
                          variable_names,
