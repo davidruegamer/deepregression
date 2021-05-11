@@ -59,7 +59,6 @@ A Python version of the package is available [here](https://github.com/Helmholtz
 
 # News
 
-* May 6: The package now supports orthogonalization on a column-basis (which is now also the default)
 * Apr 29: The convex combination of `fsbatch_optimizer` can now be adjusted via `fsbatch_factor` 
 * Mar 20: The package now support the fitting of GAMs using a batch-type Fellner-Schall algorithm (`fsbatch_optimizer`)
 

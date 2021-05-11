@@ -96,9 +96,8 @@
 #' @param zero_constraint_for_smooths logical; the same as absorb_cons,
 #' but done explicitly. If true a constraint is put on each smooth to have zero mean. Can
 #' be a vector of \code{length(list_of_formulae)} for each distribution parameter.
-#' @param orthog_type one of three options; if \code{"col"}, the orthogonalization is applied
-#' on the column nullspace and will be done during fitting; the two other options operate
-#' on the row space and are. If \code{"manual"}, the QR decomposition is calculated before model fitting, 
+#' @param orthog_type one of two options; If \code{"manual"}, 
+#' the QR decomposition is calculated before model fitting, 
 #' otherwise (\code{"tf"}) a QR is calculated in each batch iteration via TF.
 #' The first only works well for larger batch sizes or ideally batch_size == NROW(y).
 #' @param orthogonalize logical; if set to \code{FALSE}, orthogonalization is deactivated
@@ -225,7 +224,7 @@ deepregression <- function(
   absorb_cons = FALSE,
   anisotropic = TRUE,
   zero_constraint_for_smooths = TRUE,
-  orthog_type = c("col", "tf", "manual"),
+  orthog_type = c("tf", "manual"),
   orthogonalize = TRUE,
   hat1 = FALSE,
   sp_scale = NROW(y),
