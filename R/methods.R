@@ -504,7 +504,7 @@ predict.deeptrafo <- function(
   }
 
   trafo_fun <- function(y, type = c("trafo", "pdf", "cdf", "interaction", "shift", "output", "sample"),
-                        which = NULL, grid = FALSE)
+                        which = NULL, grid = FALSE, batch_size = NULL)
   {
     type <- match.arg(type)
 
@@ -513,7 +513,7 @@ predict.deeptrafo <- function(
     ay <- tf$cast(object$init_params$y_basis_fun(y), tf$float32)
     aPrimey <- tf$cast(object$init_params$y_basis_fun_prime(y), tf$float32)
     inpCov[length(inpCov)-c(1,0)] <- list(ay, aPrimey)
-    mod_output <- evaluate.deeptrafo(object, inpCov, y, image_data)
+    mod_output <- evaluate.deeptrafo(object, inpCov, y, image_data, batch_size = batch_size)
     if(type=="output") return(mod_output)
     w_eta <- mod_output[, 1, drop = FALSE]
     aTtheta <- mod_output[, 2, drop = FALSE]
@@ -596,7 +596,7 @@ predict.deeptrafo <- function(
 
 }
 
-evaluate.deeptrafo <- function(object, newdata, y, data_image, batch_size = 32)
+evaluate.deeptrafo <- function(object, newdata, y, data_image, batch_size = NULL)
 {
   
   
@@ -606,7 +606,7 @@ evaluate.deeptrafo <- function(object, newdata, y, data_image, batch_size = 32)
     
     # prepare generator
     max_data <- NROW(data_image)
-    if(is.null(batch_size)) batch_size <- 20
+    if(is.null(batch_size)) batch_size <- 32
     steps_per_epoch <- ceiling(max_data/batch_size)
     
     generator <- make_generator(data_image, data_tab, batch_size, 
@@ -623,7 +623,24 @@ evaluate.deeptrafo <- function(object, newdata, y, data_image, batch_size = 32)
     
   }else{
     
-    mod_output <- object$model(list(newdata, tf$cast(matrix(y, ncol=1), tf$float32)))
+    if(is.null(batch_size)){
+      
+      mod_output <- object$model(list(newdata, tf$cast(matrix(y, ncol=1), tf$float32)))
+    
+    }else{
+      
+        max_data <- NROW(newdata[[1]])
+        steps_per_epoch <- ceiling(max_data/batch_size)
+        
+        mod_output <- lapply(1:steps_per_epoch, 
+                             function(i){
+                               index <- (i-1)*batch_size + 1:batch_size
+                               object$model(list(lapply(newdata, function(x) subset_array(x, index)), 
+                                            tf$cast(matrix(y[index], ncol=1), tf$float32)))
+                             })
+        mod_output <- do.call("rbind", lapply(mod_output, as.matrix))
+    
+    }
     
   }
   
