@@ -532,8 +532,9 @@ get_contents <- function(lf, data, df,
     
     vclist <- lapply(attr(tf, "specials")$vc, function(i) 
       build_vc(terms[[i]], data, name = paste0("tp_layer_", nr_param, "_", i)))
-    names(vclist) <- sapply(terms[attr(tf, "specials")$vc], 
-                            function(x) gsub("\\s|\\)","", gsub("\\(|,|=", "_",  deparse(x))))
+    names(vclist) <- paste0(sapply(terms[attr(tf, "specials")$vc], 
+                                   function(x) gsub("\\s|\\)","", gsub("\\(|,|=", "_",  deparse(x)))),
+                            "_param_", nr_param)
     
     if(is.null(deepterms)) deepterms <- vclist else
       deepterms <- c(deepterms, vclist)
