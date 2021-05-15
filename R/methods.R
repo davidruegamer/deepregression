@@ -472,6 +472,7 @@ predict.deeptrafo <- function(
   object,
   newdata = NULL,
   which = NULL,
+  cast_float = FALSE,
   ...
 )
 {
@@ -482,6 +483,7 @@ predict.deeptrafo <- function(
     # preprocess data
     if(is.data.frame(newdata)) newdata <- as.list(newdata)
     inpCov <- prepare_data(object, newdata, pred=TRUE)
+    if(cast_float) inpCov <- lapply(inpCov, function(x) tf$constant(x, dtype = "float32"))
     if(length(inpCov)==2 && !is.null(names(inpCov)) && names(inpCov)[2]=="minval")
     {
       minval <- inpCov[[2]]
