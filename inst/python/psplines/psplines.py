@@ -25,12 +25,12 @@ def lambda_times_P(lambdas, Plist):
 def weight_decay(vecOld, vecNew, rate = 0.01):
     return(vecOld*(1-rate) + vecNew*rate)
 
-def update_lambda(S, I, weights, lambdas, mask):
+def update_lambda(S, I, weights, lambdas, mask, constdiv = 0, constinv = 0):
     lambdas = tf.exp(lambdas)
     # set_trace()
     S_lambda = tf.linalg.LinearOperatorBlockDiag(lambda_times_P(lambdas, S)).to_dense()
     def calcHinv(x):
-        return(tf.linalg.solve(I + S_lambda, x))
+        return(tf.linalg.solve(I + S_lambda + tf.diag(tf.ones(I.shape[0])*constinv), x))
     new_lambdas = tf.random.normal([1,1])
     for j in range(lambdas.shape[0]):
         if(mask[j]==0):
@@ -42,8 +42,9 @@ def update_lambda(S, I, weights, lambdas, mask):
 #         p_j = tf.rank(S_j) 
             Hinv = calcHinv(S_j)
             tracePart = tf.linalg.trace(Hinv)
-
-            new_lambdas = tf.concat([new_lambdas, (p_j + tracePart) * lambdas[j,:] / tf_incross(weights, S_j)], axis = 0)
+            bTSb = tf_incross(weights, S_j)
+            bTSb += tf.constant(constdiv)
+            new_lambdas = tf.concat([new_lambdas, (p_j + tracePart) * lambdas[j,:] / bTSb], axis = 0)
 
     return(new_lambdas[1:(lambdas.shape[0]+1),:], calcHinv)
 
@@ -136,10 +137,16 @@ def get_masks(mod):
         if 'pen_layer' in layer.name:
             masks.append(layer.mask)
     return(masks)
+    
+def exp_decay(x, fac = 1):
+    return(x * np.exp(-fac))
 
-def build_kerasGAM(fac = 0.01):
+def build_kerasGAM(fac = 0.01, lr_scheduler = None, avg_over_past = False, constdiv = 0.0, constinv = 0.0, constinv_scheduler = exp_decay):
 
     class kerasGAM(tf.keras.Model):
+    
+        fac_update = tf.constant(fac)
+        
         def train_step(self, data):
             x, y = data
 
@@ -166,10 +173,17 @@ def build_kerasGAM(fac = 0.01):
             
             
             H = tf.reshape(tf.stack(t2.jacobian(gradients_betas, betas)), [betas.shape[0],betas.shape[0]])
-            update = update_lambda(Plist, H, betas, lambdas, get_masks(self))
+            
+            if constinv_scheduler is not None and constinv > 1e-12:
+                constinv = constinv_scheduler(constinv)
+            
+            update = update_lambda(Plist, H, betas, lambdas, get_masks(self), constdiv, constinv)
             phi = self.compiled_loss(y, y_pred) / (y.shape[0] - tf.linalg.trace(update[1](tf_crossprod(x,x))))
-            # fac = 0.01
-            lambdas.assign(phi*update[0]*fac + (1-fac)*lambdas)      
+            
+            if lr_scheduler is not None:
+                fac_update = lr_scheduler(fac_update)                                
+            
+            lambdas.assign(phi*update[0]*fac_update + (1-fac_update)*lambdas)      
 
             betas.assign(betas-update[1](gradients_betas))
             # ====================================

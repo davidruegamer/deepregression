@@ -505,6 +505,7 @@ predict.deeptrafo <- function(
     }
   }
 
+  # TODO: make prediction possible for one observation only; fix type mismatch pdf grid
   trafo_fun <- function(y, type = c("trafo", "pdf", "cdf", "interaction", "shift", "output", "sample"),
                         which = NULL, grid = FALSE, batch_size = NULL)
   {

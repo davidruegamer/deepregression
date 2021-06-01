@@ -56,8 +56,8 @@
 #' @param optimizer optimzer used. Per default ADAM.
 #' @param fsbatch_optimizer logical; use a special optimizer conducting a mini-batch variant of the 
 #' Fellner-Schall algorithm.
-#' @param fsbatch_factor a factor defining how much of the past is used for the Fellner-Schall
-#' algorithm; defaults to 0.01
+#' @param fsbatch_options call to \code{fsbatch_control} with list of options for fsbatch_optimizer.
+#' See \code{?fsbatch_control} for details.
 #' @param variational logical value specifying whether or not to use
 #' variational inference. If \code{TRUE}, details must be passed to
 #' the via the ellipsis to the initialization function
@@ -207,7 +207,7 @@ deepregression <- function(
   learning_rate = 0.01,
   optimizer = optimizer_adam(lr = learning_rate),
   fsbatch_optimizer = FALSE,
-  fsbatch_factor = 0.01,
+  fsbatch_options = fsbatch_control(),
   variational = FALSE,
   monitor_metric = list(),
   seed = 1991-5-4,
@@ -545,6 +545,32 @@ deepregression <- function(
 
   if(family=="transformation_model"){
 
+    # atm_toplayer <- NULL
+    
+    if(nr_params==3){
+      
+      pos_lags <- sum(sapply(parsed_formulae_contents, function(x) (
+        !is.null(x$deepterms))*1 + !is.null(x$linterms)))
+      intercept_form <- "(Intercept)" %in% names(parsed_formulae_contents[[3]]$linterms)
+      atm_lags <- ncol(input_cov[[pos_lags]])-intercept_form
+      
+      input_cov[[pos_lags]] <- lapply(1:atm_lags, 
+                                      function(i)y_basis_fun(input_cov[[pos_lags]][,i+intercept_form]))
+      input_cov <- unlist_order_preserving(input_cov)
+      if(!is.null(validation_data)){
+        validation_data[[1]][[3]] <-
+          lapply(1:(ncol(validation_data[[1]][[pos_lags]])-intercept_form), 
+                 function(i)y_basis_fun(validation_data[[1]][[pos_lags]][,i+intercept_form]))
+        validation_data[[1]] <- unlist_order_preserving(validation_data[[1]])
+      }
+      
+      ncol_structured <- ncol_structured[1:2]
+
+      # atm_toplayer <- list_structured[[3]]
+      # list_structured <- list_structured[1:2]
+
+    }
+    
     input_cov <- c(input_cov,
                    list(y_basis_fun(y),
                         y_basis_fun_prime(y)))
@@ -574,6 +600,7 @@ deepregression <- function(
       split_between_shift_and_theta = split_between_shift_and_theta,
       addconst_interaction = addconst_interaction,
       base_distribution = base_distribution,
+      atm_lags = ifelse(nr_params==2,0,atm_lags),
       ...
     )
 
@@ -595,7 +622,7 @@ deepregression <- function(
         extend_output_dim = extend_output_dim,
         offset = if(is.null(offset)) NULL else lapply(offset, NCOL0),
         additional_penalty = additional_penalty,
-        fsbatch_factor = fsbatch_factor
+        fsbatch_options = fsbatch_options
       )
       
       
@@ -956,9 +983,10 @@ deepregression_init <- function(
   #        "a deep model must be provided for each parameter."))
   deep_split <- lapply(ncol_deep[1:nr_params], function(param_list){
     lapply(names(param_list), function(nn){
-      if(is.null(nn)) return(NULL) else if(grepl("^vc_.*",nn)) return(list(list_deep[[nn]],
-                                                                           function(x) x)) else
-        split_fun(list_deep[[nn]])
+      if(is.null(nn)) return(NULL) else if(grepl("^vc_.*",nn) | grepl("^fctly_.*",nn)) return(
+        list(list_deep[[nn]],
+             function(x) x)) else
+               split_fun(list_deep[[nn]])
     })
   })
 
@@ -1203,7 +1231,7 @@ deepregression_init <- function(
 #' that takes the \code{model$trainable_weights} as input and applies the
 #' additional penalty. In order to get the correct index for the trainable
 #' weights, you can run the model once and check its structure.
-#' @param fsbatch_factor factor for Fellner-Schall algorithm, see 
+#' @param fsbatch_options options for Fellner-Schall algorithm, see 
 #' \code{?deepregression}
 #'
 #' @export
@@ -1222,7 +1250,7 @@ dr_init <- function(
   extend_output_dim = 0,
   offset = NULL,
   additional_penalty = NULL,
-  fsbatch_factor = 0.01
+  fsbatch_options = fsbatch_control()
 )
 {
   
@@ -1383,7 +1411,7 @@ dr_init <- function(
     
   }
   
-  kerasGAM <- build_kerasGAM(fsbatch_factor)
+  kerasGAM <- do.call("build_kerasGAM", fsbatch_options)
   
   # the final model is defined by its inputs
   # and outputs
@@ -1526,7 +1554,9 @@ deeptransformation_init <- function(
   penalize_bsp = 0,
   order_bsp_penalty = 2,
   base_distribution = "normal",
-  batch_shape = NULL
+  batch_shape = NULL,
+  atm_lags = 0,
+  atm_toplayer = NULL
 )
 {
 
@@ -1581,6 +1611,9 @@ deeptransformation_init <- function(
   # inputs for BSP trafo of Y, both n x tilde{M}
   input_theta_y <- layer_input(shape = list(order_bsp+1L))
   input_theta_y_prime <- layer_input(shape = list(order_bsp+1L))
+  if(atm_lags) input_theta_atm <- lapply(1:atm_lags, function(x) 
+    layer_input(shape = list(as.integer((order_bsp+1L))))) else
+      input_theta_atm <- NULL
 
   structured_parts <- vector("list", 2)
 
@@ -1808,6 +1841,50 @@ deeptransformation_init <- function(
     # }
 
   }
+  
+  if(atm_lags){
+    
+    if(!is.null(interact_pred_trafo)){
+      
+     rho_parts <- lapply(input_theta_atm, function(inp) 
+       tf_row_tensor_right_part(inp, interact_pred) %>%
+        thetas_layer() %>%
+        layer_lambda(f = interact_pred_trafo))
+
+      
+      aTtheta_lags <- lapply(rho_parts, function(rp) tf$matmul(
+        tf$multiply(tf_row_tensor_left_part(input_theta_y,
+                                            interact_pred),
+                    rp),
+        tf$ones(shape = c((order_bsp+1L)*(ncol(interact_pred)[[1]]),1))
+      ))
+      
+    }else{
+      
+
+      ## thetas
+      AoBs <- lapply(input_theta_atm, function(inp) 
+        tf_row_tensor(inp, interact_pred))
+      
+      aTtheta_lags <- lapply(AoBs, function(aob) aob %>% thetas_layer())
+
+      
+    }
+    
+    if(is.null(atm_toplayer)){
+      
+      if(length(aTtheta_lags)==1)
+        final_eta_pred <- final_eta_pred + aTtheta_lags[[1]] else
+          final_eta_pred <- final_eta_pred + layer_add(aTtheta_lags)
+      
+    }else{
+      
+      aTtheta_lags <- if(length(aTtheta_lags)==1) aTtheta_lags[[1]] else layer_concatenate(aTtheta_lags)
+      final_eta_pred <- final_eta_pred + (aTtheta_lags %>% atm_toplayer)
+      
+    }
+    
+  }
 
   # if(!is.null(addconst_interaction))
   # {
@@ -1866,10 +1943,15 @@ deeptransformation_init <- function(
   inputList <- unname(c(
     unlist(inputs_deep[!sapply(inputs_deep, is.null)],
            recursive = F),
-    inputs_struct[!sapply(inputs_struct, is.null)],
-    unlist(ox[!sapply(ox, is.null)]),
-    input_theta_y,
-    input_theta_y_prime
+    inputs_struct[!sapply(inputs_struct, is.null)]))
+  
+  if(!is.null(input_theta_atm))
+    inputList <- unname(c(inputList, input_theta_atm))
+  
+  inputList <- unname(c(inputList, 
+                        unlist(ox[!sapply(ox, is.null)]),
+                        input_theta_y,
+                        input_theta_y_prime
   )
   )
 

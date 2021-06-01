@@ -98,11 +98,25 @@ layer_factor <- function(nlev, units = 1, activation = "linear", use_bias = FALS
                          kernel_regularizer = NULL)
 {
   
-  function(x) tf$one_hot(tf$cast(x[,1], dtype="int32"), depth=nlev) %>% layer_dense(
+  ret_fun <- function(x) tf$one_hot(tf$cast(x[,1], dtype="int32"), depth = nlev) %>% layer_dense(
     units = units,
     activation = activation,
     use_bias = use_bias,
     name = name,
     kernel_regularizer = kernel_regularizer)
+  return(ret_fun)
+  
+}
+
+layer_random_effect <- function(freq, df)
+{
+  
+  df_fun <- function(lam) sum((freq^2 + 2*freq*lam)/(freq+lam)^2)
+  lambda = uniroot(function(x){df_fun(x)-df}, interval = c(0,1e15))$root
+  nlev = length(freq)
+  return(
+    layer_factor(nlev = nlev, units = 1, activation = "linear", use_bias = FALSE, name = NULL,
+                 kernel_regularizer = regularizer_l2(l = lambda/sum(freq)))
+  )
   
 }

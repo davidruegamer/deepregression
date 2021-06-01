@@ -312,11 +312,42 @@ trainable_pspline = function(units, this_lambdas, this_mask, this_P, this_n, thi
 #   return(splines$kerasGAM(inputs, outputs))
 # }
 
-build_kerasGAM = function(fsbatch_factor) {
+#' Options for Fellner-Schall algorithm
+#'
+#' @param factor a factor defining how much of the past is used for the Fellner-Schall
+#' algorithm; defaults to 0.01. 
+#' @param lr_scheduler a scheduler adapting
+#' \code{factor} in each step; defaults to \code{NULL}.
+#' @param avg_over_past logical, whether the beta coefficients should be averaged 
+#' over the past values to stabilize estimation; defaults to \code{FALSE}
+#' @param constantdiv small positive constant to stabilize training
+#' in small batch regimes; defaults to 0.0.
+#' @param constantinv small positive constant to stabilize training
+#' in small batch regimes; defaults to 0.0.
+#' @return Returns a list with options
+#' @export
+#'
+fsbatch_control <- function(factor = 0.01,
+                            lr_scheduler = NULL,
+                            avg_over_past = FALSE,
+                            constantdiv = 0,
+                            constantinv = 0)
+{
+  
+  return(list(factor = factor,
+              lr_scheduler = lr_scheduler,
+              avg_over_past = avg_over_past,
+              constantdiv = constantdiv,
+              constantinv = constantinv))
+  
+}
+
+build_kerasGAM = function(factor, lr_scheduler, avg_over_past, constantdiv, constantinv) {
   python_path <- system.file("python", package = "deepregression")
   splines <- reticulate::import_from_path("psplines", path = python_path)
   
-  return(splines$build_kerasGAM(fsbatch_factor))
+  return(splines$build_kerasGAM(factor, lr_scheduler, avg_over_past, 
+                                constantdiv, constantinv))
 }
 
 tf_incross = function(w, P) {
