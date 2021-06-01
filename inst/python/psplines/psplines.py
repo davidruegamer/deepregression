@@ -141,7 +141,10 @@ def get_masks(mod):
 def exp_decay(x, fac = 1):
     return(x * np.exp(-fac))
 
-def build_kerasGAM(fac = 0.01, lr_scheduler = None, avg_over_past = False, constdiv = 0.0, constinv = 0.0, constinv_scheduler = exp_decay):
+def build_kerasGAM(fac = 0.01, lr_scheduler = None, avg_over_past = False, constdiv = 0.0, constinv = 0.0, constinv_scheduler = None):
+
+    if constinv_scheduler is None:
+        constinv_scheduler = exp_decay
 
     class kerasGAM(tf.keras.Model):
     

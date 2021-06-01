@@ -324,6 +324,8 @@ trainable_pspline = function(units, this_lambdas, this_mask, this_P, this_n, thi
 #' in small batch regimes; defaults to 0.0.
 #' @param constantinv small positive constant to stabilize training
 #' in small batch regimes; defaults to 0.0.
+#' @param constinv_scheduler scheduler for \code{constantinv}; per default 
+#' NULL which results in an exponential decay with rate 1 
 #' @return Returns a list with options
 #' @export
 #'
@@ -331,23 +333,25 @@ fsbatch_control <- function(factor = 0.01,
                             lr_scheduler = NULL,
                             avg_over_past = FALSE,
                             constantdiv = 0,
-                            constantinv = 0)
+                            constantinv = 0,
+                            constinv_scheduler = NULL)
 {
   
   return(list(factor = factor,
               lr_scheduler = lr_scheduler,
               avg_over_past = avg_over_past,
               constantdiv = constantdiv,
-              constantinv = constantinv))
+              constantinv = constantinv,
+              constinv_scheduler))
   
 }
 
-build_kerasGAM = function(factor, lr_scheduler, avg_over_past, constantdiv, constantinv) {
+build_kerasGAM = function(factor, lr_scheduler, avg_over_past, constantdiv, constantinv, constinv_scheduler) {
   python_path <- system.file("python", package = "deepregression")
   splines <- reticulate::import_from_path("psplines", path = python_path)
   
   return(splines$build_kerasGAM(factor, lr_scheduler, avg_over_past, 
-                                constantdiv, constantinv))
+                                constantdiv, constantinv, constinv_scheduler))
 }
 
 tf_incross = function(w, P) {
