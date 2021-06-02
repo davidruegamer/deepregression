@@ -336,7 +336,7 @@ deepregression <- function(
   # check orthog type
   orthog_type <- match.arg(orthog_type)
   # check monitor metric for auc
-  if("auc" %in% monitor_metric)
+  if(is.list(monitor_metric) && "auc" %in% monitor_metric)
     if(length(monitor_metric)==1)
       monitor_metric <- auc_metric else
         warning("If auc is chosen as metric, it must be the only specified metric.")
@@ -2075,10 +2075,11 @@ deeptransformation_init <- function(
   if(!is.null(reg)) model$add_loss(reg)
   # add additional l1 or l2
   if(!is.null(reg2)) model$add_loss(reg2)
-
+  
   model %>% compile(
     optimizer = optimizer,
-    loss      = neg_ll
+    loss      = neg_ll,
+    metrics   = monitor_metric
   )
 
   return(model)
