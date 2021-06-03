@@ -27,7 +27,10 @@ deeptransformation_init(
   addconst_interaction = NULL,
   penalize_bsp = 0,
   order_bsp_penalty = 2,
-  base_distribution = "normal"
+  base_distribution = "normal",
+  batch_shape = NULL,
+  atm_lags = 0,
+  atm_toplayer = NULL
 )
 }
 \arguments{

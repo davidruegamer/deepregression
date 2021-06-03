@@ -22,6 +22,7 @@ deepregression(
   df = NULL,
   lambda_lasso = NULL,
   lambda_ridge = NULL,
+  convert_factors = FALSE,
   defaultSmoothing = NULL,
   cv_folds = NULL,
   validation_data = NULL,
@@ -30,7 +31,7 @@ deepregression(
   learning_rate = 0.01,
   optimizer = optimizer_adam(lr = learning_rate),
   fsbatch_optimizer = FALSE,
-  fsbatch_factor = 0.01,
+  fsbatch_options = fsbatch_control(),
   variational = FALSE,
   monitor_metric = list(),
   seed = 1991 - 5 - 4,
@@ -47,7 +48,7 @@ deepregression(
   absorb_cons = FALSE,
   anisotropic = TRUE,
   zero_constraint_for_smooths = TRUE,
-  orthog_type = c("col", "tf", "manual"),
+  orthog_type = c("tf", "manual"),
   orthogonalize = TRUE,
   hat1 = FALSE,
   sp_scale = NROW(y),
@@ -141,8 +142,8 @@ a custom distribution function.}
 \item{fsbatch_optimizer}{logical; use a special optimizer conducting a mini-batch variant of the 
 Fellner-Schall algorithm.}
 
-\item{fsbatch_factor}{a factor defining how much of the past is used for the Fellner-Schall
-algorithm; defaults to 0.01}
+\item{fsbatch_options}{call to \code{fsbatch_control} with list of options for fsbatch_optimizer.
+See \code{?fsbatch_control} for details.}
 
 \item{variational}{logical value specifying whether or not to use
 variational inference. If \code{TRUE}, details must be passed to
@@ -198,9 +199,8 @@ See \code{?mgcv::smoothCon} for more details.}
 but done explicitly. If true a constraint is put on each smooth to have zero mean. Can
 be a vector of \code{length(list_of_formulae)} for each distribution parameter.}
 
-\item{orthog_type}{one of three options; if \code{"col"}, the orthogonalization is applied
-on the column nullspace and will be done during fitting; the two other options operate
-on the row space and are. If \code{"manual"}, the QR decomposition is calculated before model fitting, 
+\item{orthog_type}{one of two options; If \code{"manual"}, 
+the QR decomposition is calculated before model fitting, 
 otherwise (\code{"tf"}) a QR is calculated in each batch iteration via TF.
 The first only works well for larger batch sizes or ideally batch_size == NROW(y).}
 
@@ -229,7 +229,8 @@ If > 0, the minimum value plus the \code{addconst_interaction} is added to each 
 in the interaction term.}
 
 \item{additional_penalty}{a penalty that is added to the negative log-likelihood; must be
-a function of the keras model's \code{trainable_weights} (including necessary subsetting)}
+a function of the keras model's \code{trainable_weights} (including necessary subsetting) which
+is always called \code{model}}
 
 \item{penalty_summary}{keras function; summary function for the penalty in the spline layer;
 default is \code{k_sum}. Another option could be \code{k_mean}.}

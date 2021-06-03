@@ -37,7 +37,7 @@ prepare_data(x, data, pred = TRUE)
   ...
 )
 
-\method{predict}{deeptrafo}(object, newdata = NULL, which = NULL, ...)
+\method{predict}{deeptrafo}(object, newdata = NULL, which = NULL, cast_float = FALSE, ...)
 
 \method{fitted}{deepregression}(object, apply_fun = tfd_mean, ...)
 
@@ -49,7 +49,7 @@ prepare_data(x, data, pred = TRUE)
   patience = 20,
   save_weights = FALSE,
   auc_callback = FALSE,
-  val_data = NULL,
+  validation_data = NULL,
   callbacks = list(),
   convertfun = function(x) tf$constant(x, dtype = "float32"),
   ...
@@ -131,7 +131,7 @@ per default \code{as.matrix}}
 
 \item{auc_callback}{logical, whether to use a callback for AUC}
 
-\item{val_data}{optional specified validation data}
+\item{validation_data}{optional specified validation data}
 
 \item{callbacks}{a list of callbacks used for fitting}
 

@@ -19,7 +19,7 @@ dr_init(
   extend_output_dim = 0,
   offset = NULL,
   additional_penalty = NULL,
-  fsbatch_factor = 0.01
+  fsbatch_options = fsbatch_control()
 )
 }
 \arguments{
@@ -61,7 +61,7 @@ that takes the \code{model$trainable_weights} as input and applies the
 additional penalty. In order to get the correct index for the trainable
 weights, you can run the model once and check its structure.}
 
-\item{fsbatch_factor}{factor for Fellner-Schall algorithm, see 
+\item{fsbatch_options}{options for Fellner-Schall algorithm, see 
 \code{?deepregression}}
 }
 \description{
