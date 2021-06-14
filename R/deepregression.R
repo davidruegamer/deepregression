@@ -244,8 +244,7 @@ deepregression <- function(
 )
 {
 
-  # TF seed -> does not work atm
-  if(!is.null(tf_seed)) # nocov start
+  if(!is.null(tf_seed)) 
     try(tensorflow::use_session_with_seed(tf_seed), silent = TRUE)
 
   # first check if an env is available
@@ -913,17 +912,14 @@ deepregression_init <- function(
                                  {
                                    if(!is.null(lambda_lasso[[i]]) &
                                       is.null(lambda_ridge[[i]])){
-                                     l1 = tf$keras$regularizers$l1(l=lambda_lasso[[i]])
-                                     return(inputs_struct[[i]] %>%
-                                              dense_layer(
-                                                units = as.integer(output_dim[i]),
-                                                activation = "linear",
-                                                use_bias = use_bias_in_structured,
-                                                kernel_regularizer = l1,
-                                                kernel_constraint = constraint_fun[[i]],
-                                                name = paste0("structured_lasso_",
-                                                              i))
+                                     # l1 = tf$keras$regularizers$l1(l=lambda_lasso[[i]])
+                                     lasso_layer <- tib_layer(
+                                       input_dim = ncol_structured[i],
+                                       use_bias = use_bias_in_structured,
+                                       la = lambda_lasso[[i]],
+                                       name = paste0("tib_lasso_", i)
                                      )
+                                     return(inputs_struct[[i]] %>% lasso_layer)
                                    }else if(!is.null(lambda_ridge[[i]]) &
                                             is.null(lambda_lasso[[i]])){
                                      l2 = tf$keras$regularizers$l2(l=lambda_ridge[[i]])
@@ -1417,7 +1413,7 @@ dr_init <- function(
   # and outputs
   model <- kerasGAM(inputs = inputList,
                     outputs = out)
-
+  
   l <- 1  
   for(i in 1:length(list_structured)){
 
@@ -1473,7 +1469,7 @@ dr_init <- function(
   # compile the model using the defined optimizer,
   # the negative log-likelihood as loss funciton
   # and the defined monitoring metrics as metrics
-  model %>% compile(optimizer = optimizer_sgd(),
+  model %>% compile(optimizer = tf$keras$optimizers$SGD(),
                     loss = negloglik,
                     metrics = monitor_metric)
   

@@ -1,7 +1,7 @@
 import tensorflow as tf
-import tensorflow.keras.backend as K
 import numpy as np
 import math
+from tensorflow import keras
 
 ### Helper functions matrix algebra
 def tf_crossprod(a,b):
@@ -141,14 +141,12 @@ def get_masks(mod):
 def exp_decay(x, fac = 1):
     return(x * np.exp(-fac))
 
-def build_kerasGAM(fac = 0.01, lr_scheduler = None, avg_over_past = False, constdiv = 0.0, constinv = 0.0, constinv_scheduler = None):
+def build_kerasGAM(fac = 0.01, lr_scheduler = None, avg_over_past = False):
 
-    if constinv_scheduler is None:
-        constinv_scheduler = exp_decay
 
-    class kerasGAM(tf.keras.Model):
-    
-        fac_update = tf.constant(fac)
+    class kerasGAM(keras.models.Model):
+
+        fac_update = tf.constant(fac)    
         
         def train_step(self, data):
             x, y = data
@@ -177,10 +175,7 @@ def build_kerasGAM(fac = 0.01, lr_scheduler = None, avg_over_past = False, const
             
             H = tf.reshape(tf.stack(t2.jacobian(gradients_betas, betas)), [betas.shape[0],betas.shape[0]])
             
-            if constinv_scheduler is not None and constinv > 1e-12:
-                constinv = constinv_scheduler(constinv)
-            
-            update = update_lambda(Plist, H, betas, lambdas, get_masks(self), constdiv, constinv)
+            update = update_lambda(Plist, H, betas, lambdas, get_masks(self))
             phi = self.compiled_loss(y, y_pred) / (y.shape[0] - tf.linalg.trace(update[1](tf_crossprod(x,x))))
             
             if lr_scheduler is not None:
@@ -194,7 +189,8 @@ def build_kerasGAM(fac = 0.01, lr_scheduler = None, avg_over_past = False, const
             # Compute our own metrics
             # loss_tracker.update_state(loss)
             #  return {"loss": loss_tracker.result()}
-
-            return()
             
+            self.compiled_metrics.update_state(y, y_pred)
+            return {m.name: m.result() for m in self.metrics}
+
     return(kerasGAM)   

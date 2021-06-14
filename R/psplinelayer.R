@@ -342,17 +342,22 @@ fsbatch_control <- function(factor = 0.01,
               avg_over_past = avg_over_past,
               constantdiv = constantdiv,
               constantinv = constantinv,
-              constinv_scheduler))
+              constinv_scheduler = constinv_scheduler))
   
 }
 
 build_kerasGAM = function(factor, lr_scheduler, avg_over_past, constantdiv, constantinv, constinv_scheduler) {
   python_path <- system.file("python", package = "deepregression")
-  splines <- reticulate::import_from_path("psplines", path = python_path)
+  splines <- reticulate::import_from_path("psplines", path = 
+                                            "~/deepregression_master/deepregression/inst/python/"
+                                            #python_path
+                                            )
   
-  return(splines$build_kerasGAM(factor, lr_scheduler, avg_over_past, 
-                                constantdiv, constantinv, constinv_scheduler))
+  return(splines$build_kerasGAM(fac = factor, 
+                                lr_scheduler = lr_scheduler, 
+                                avg_over_past = avg_over_past))
 }
+
 
 tf_incross = function(w, P) {
   python_path <- system.file("python", package = "deepregression")

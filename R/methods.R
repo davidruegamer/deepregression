@@ -1011,18 +1011,26 @@ coef.deepregression <- function(
     sl <- paste0("structured_linear_",i)
     slas <- paste0("structured_lasso_",i)
     snl <- paste0("structured_nonlinear_",i)
+    tl <- paste0("tib_lasso_", i)
     lret[[j]] <- list(structured_linear = NULL,
                       structured_lasso = NULL,
-                      structured_nonlinear = NULL)
+                      structured_nonlinear = NULL
+                      )
 
     lret[[j]]$structured_linear <-
       if(sl %in% layer_names)
         object$model$get_layer(sl)$get_weights()[[1]] else
           NULL
-    lret[[j]]$structured_lasso <-
-      if(slas %in% layer_names)
-        object$model$get_layer(slas)$get_weights()[[1]] else
-          NULL
+    if(slas %in% layer_names | tl %in% layer_names){
+        if(slas %in% layer_names)
+          lret[[j]]$structured_lasso <- object$model$get_layer(slas)$get_weights()[[1]] else
+            lret[[j]]$structured_lasso <- 
+              rbind(object$model$get_layer(tl)$get_weights()[[2]],
+                    object$model$get_layer(tl)$get_weights()[[1]] *
+                      matrix(object$model$get_layer(tl)$get_weights()[[3]], ncol=1))
+    }else{
+      lret[[j]]$structured_lasso <- NULL
+    }
     if(snl %in% layer_names){
       cf <- object$model$get_layer(snl)$get_weights()
       if(length(cf)==2 & variational){

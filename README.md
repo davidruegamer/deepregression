@@ -57,11 +57,6 @@ See [the tutorial](https://arxiv.org/pdf/2104.02705.pdf) for a detailed introduc
 
 A Python version of the package is available [here](https://github.com/HelmholtzAI-Consultants-Munich/PySDDR). 
 
-# News
-
-* Apr 29: The convex combination of `fsbatch_optimizer` can now be adjusted via `fsbatch_factor` 
-* Mar 20: The package now support the fitting of GAMs using a batch-type Fellner-Schall algorithm (`fsbatch_optimizer`)
-
 # Related literature
 
 The following works are based on the ideas implemented in this package:
@@ -71,3 +66,20 @@ The following works are based on the ideas implemented in this package:
 * [Deep Conditional Transformation Models](https://arxiv.org/abs/2010.07860)
 * [Semi-Structured Deep Piecewise Exponential Models](https://arxiv.org/abs/2011.05824)
 * [Combining Graph Neural Networks and Spatio-temporal Disease Models to Predict COVID-19 Cases in Germany](https://arxiv.org/abs/2101.00661)
+
+# People that contributed
+
+Many thanks to following people for helpful comments, issues, suggestions for improvements and discussions: 
+
+* Andreas Bender
+* Christina Bukas
+* Christian Mueller
+* Nadja Klein
+* Chris Kolb
+* Philipp Kopper
+* Fabian Scheipl
+* Max Schneider
+* Ruolin Shen
+* Almond Stoecker
+* Dominik Thalmeier
+* Kang Yang
