@@ -621,7 +621,8 @@ deepregression <- function(
         extend_output_dim = extend_output_dim,
         offset = if(is.null(offset)) NULL else lapply(offset, NCOL0),
         additional_penalty = additional_penalty,
-        fsbatch_options = fsbatch_options
+        fsbatch_options = fsbatch_options,
+        optimizer = optimizer
       )
       
       
@@ -1229,6 +1230,7 @@ deepregression_init <- function(
 #' weights, you can run the model once and check its structure.
 #' @param fsbatch_options options for Fellner-Schall algorithm, see 
 #' \code{?deepregression}
+#' @param optimizer see \code{?deepregression} 
 #'
 #' @export
 dr_init <- function(
@@ -1246,7 +1248,8 @@ dr_init <- function(
   extend_output_dim = 0,
   offset = NULL,
   additional_penalty = NULL,
-  fsbatch_options = fsbatch_control()
+  fsbatch_options = fsbatch_control(),
+  optimizer = tf$keras$optimizers$SGD()
 )
 {
   
@@ -1407,7 +1410,12 @@ dr_init <- function(
     
   }
   
-  kerasGAM <- do.call("build_kerasGAM", fsbatch_options)
+  # Plist <- lapply(list_structured, function(x) x$P)
+  # Plist <- Plist[!sapply(Plist, is.null)]
+  # Plist <- lapply(Plist, function(x) lapply(1:length(x), function(i) x[[i-1]]))
+  
+  kerasGAM <- do.call("build_kerasGAM", #c(list(Plist = Plist[[1]]), 
+                      fsbatch_options)#)
   
   # the final model is defined by its inputs
   # and outputs
@@ -1469,7 +1477,7 @@ dr_init <- function(
   # compile the model using the defined optimizer,
   # the negative log-likelihood as loss funciton
   # and the defined monitoring metrics as metrics
-  model %>% compile(optimizer = tf$keras$optimizers$SGD(),
+  model %>% compile(optimizer = optimizer,
                     loss = negloglik,
                     metrics = monitor_metric)
   

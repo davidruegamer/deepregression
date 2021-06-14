@@ -140,13 +140,13 @@ def get_masks(mod):
     
 def exp_decay(x, fac = 1):
     return(x * np.exp(-fac))
-
+    
 def build_kerasGAM(fac = 0.01, lr_scheduler = None, avg_over_past = False):
 
 
     class kerasGAM(keras.models.Model):
 
-        fac_update = tf.constant(fac)    
+        fac_update = tf.constant(fac)
         
         def train_step(self, data):
             x, y = data
