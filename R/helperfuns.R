@@ -183,7 +183,7 @@ get_contents <- function(lf, data, df,
                          variable_names,
                          network_names,
                          intercept = TRUE,
-                         defaultSmoothing,
+                         defaultSmoothing = NULL,
                          absorb_cons = TRUE,
                          null_space_penalty = FALSE,
                          hat1 = TRUE,
@@ -194,6 +194,8 @@ get_contents <- function(lf, data, df,
   {
   # extract which parts are modelled as deep parts
   # which by smooths, which linear
+  if(is.character(lf)) lf <- as.formula(lf)
+  
   specials <- c("s", "te", "ti", network_names, "vc", "vvc")
   tf <- terms.formula(lf, specials=specials, data=data)
 

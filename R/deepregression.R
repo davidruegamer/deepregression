@@ -1846,8 +1846,10 @@ deeptransformation_init <- function(
 
   }
   
+  # Check if model is SATs
   if(atm_lags){
     
+    # if h1 is given, transform F_{t-1} using h1
     if(!is.null(interact_pred_trafo)){
       
      rho_parts <- lapply(input_theta_atm, function(inp) 
@@ -1863,8 +1865,10 @@ deeptransformation_init <- function(
         tf$ones(shape = c((order_bsp+1L)*(ncol(interact_pred)[[1]]),1))
       ))
       
-    }else{
       
+      # otherwise just combine lags with interact_pred via RWT
+      # and add thetas layer on top
+    }else{ 
 
       ## thetas
       AoBs <- lapply(input_theta_atm, function(inp) 
@@ -1875,20 +1879,15 @@ deeptransformation_init <- function(
       
     }
     
-    if(is.null(atm_toplayer)){
-      
-      if(length(aTtheta_lags)==1)
-        final_eta_pred <- final_eta_pred + aTtheta_lags[[1]] else
-          final_eta_pred <- final_eta_pred + layer_add(aTtheta_lags)
-      
-    }else{
-      
-      aTtheta_lags <- if(length(aTtheta_lags)==1) aTtheta_lags[[1]] else layer_concatenate(aTtheta_lags)
-      final_eta_pred <- final_eta_pred + (aTtheta_lags %>% atm_toplayer)
-      
-    }
+    # SAT with no additional h2 
+    # just learn linear combination of transformed lags
+    if(is.null(atm_toplayer))
+      atm_toplayer <- function(x){ x %>% layer_dense(1) }
     
-  }
+    aTtheta_lags <- if(length(aTtheta_lags)==1) aTtheta_lags[[1]] else layer_concatenate(aTtheta_lags)
+    final_eta_pred <- final_eta_pred + (aTtheta_lags %>% atm_toplayer)
+    
+  } # SATs end
 
   # if(!is.null(addconst_interaction))
   # {
