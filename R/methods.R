@@ -1027,7 +1027,9 @@ coef.deepregression <- function(
             lret[[j]]$structured_lasso <- 
               rbind(object$model$get_layer(tl)$get_weights()[[2]],
                     object$model$get_layer(tl)$get_weights()[[1]] *
-                      matrix(object$model$get_layer(tl)$get_weights()[[3]], ncol=1))
+                      matrix(rep(object$model$get_layer(tl)$get_weights()[[3]], 
+                                 each=ncol(object$model$get_layer(tl)$get_weights()[[1]])), 
+                                 ncol=ncol(object$model$get_layer(tl)$get_weights()[[1]]), byrow = TRUE))
     }else{
       lret[[j]]$structured_lasso <- NULL
     }

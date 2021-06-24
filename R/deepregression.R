@@ -916,6 +916,7 @@ deepregression_init <- function(
                                      # l1 = tf$keras$regularizers$l1(l=lambda_lasso[[i]])
                                      lasso_layer <- tib_layer(
                                        input_dim = ncol_structured[i],
+                                       units = as.integer(output_dim[i]),
                                        use_bias = use_bias_in_structured,
                                        la = lambda_lasso[[i]],
                                        name = paste0("tib_lasso_", i)
