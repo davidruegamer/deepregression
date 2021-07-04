@@ -205,7 +205,7 @@ deepregression <- function(
   validation_split = ifelse(is.null(validation_data) & is.null(cv_folds), 0.2, 0),
   dist_fun = NULL,
   learning_rate = 0.01,
-  optimizer = optimizer_adam(lr = learning_rate),
+  optimizer = optimizer_adam(learning_rate = learning_rate),
   fsbatch_optimizer = FALSE,
   fsbatch_options = fsbatch_control(),
   variational = FALSE,

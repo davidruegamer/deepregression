@@ -14,8 +14,8 @@
 #' @export
 check_and_install <- function(force = FALSE) {
   if (!reticulate::py_module_available("tensorflow") || force) {
-    keras::install_keras(version = "2.4.3", tensorflow = "2.1", 
-                         extra_packages = c("tfprobability==0.9", "six")) # nocov
+    keras::install_keras(version = "2.5.0rc0", tensorflow = "2.5.0rc0", 
+                         extra_packages = c("tfprobability==0.12", "six")) # nocov
   } else {
     message("Tensorflow found, skipping tensorflow installation!")
     if (!reticulate::py_module_available("tensorflow_probability") || 
