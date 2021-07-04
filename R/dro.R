@@ -18,12 +18,11 @@ make_psd <- function(x, eps = sqrt(.Machine$double.eps)) {
 # if dmat is large due to the used SVD
 # => we allow for an approximation based on the package rsvd
 DRO <- function(X, df = 4, lambda = NULL, dmat = NULL, # weights,
-                svdtype = c("default", "rsvd"), XtX = NULL,
-                k = 100, q = 3, hat1 = TRUE, ...) {
+                svdtype = c("default", "custom"), XtX = NULL,
+                k = 100, q = 3, hat1 = TRUE, custom_svd_fun = NULL, ...) {
 
   svdtype <- match.arg(svdtype)
-  if(svdtype=="rsvd") svd <- function(A, nu, nv) rsvd::rsvd(A = A, nu = nu, nv = nv,
-                                                            k = 100, q = 3, ...)
+  if(svdtype=="custom") svd <- custom_svd_fun
 
   stopifnot(xor(is.null(df), is.null(lambda)))
   if (!is.null(df)) {

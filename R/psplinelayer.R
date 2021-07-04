@@ -78,7 +78,7 @@ layer_spline <- function(object,
 
     }else{
 
-      class <- k$layers$Dense
+      class <- tf$keras$layers$Dense
       args$kernel_initializer=kernel_initializer
       args$bias_initializer=bias_initializer
 
@@ -170,7 +170,7 @@ get_layers_from_s <- function(this_param, nr=NULL, variational=FALSE,
     mask <- as.list(rep(0,zeros))
     mask <- c(mask, as.list(rep(1,length(lambdas)-zeros)))
   }else{
-    masl <- as.list(rep(1,length(lambdas)))
+    mask <- as.list(rep(1,length(lambdas)))
   }
   
   name <- "structured_nonlinear"

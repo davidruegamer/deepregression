@@ -245,7 +245,7 @@ deepregression <- function(
 {
 
   if(!is.null(tf_seed)) 
-    try(tensorflow::use_session_with_seed(tf_seed), silent = TRUE)
+    try(tensorflow::set_random_seed(tf_seed), silent = TRUE)
 
   # first check if an env is available
   if(!reticulate::py_available())

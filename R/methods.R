@@ -735,7 +735,7 @@ fit.deepregression <- function(
     val_data_processed <- prepare_data(x, validation_data[[1]], pred=TRUE)
 
     auc_cb <- auc_roc$new(training = list(unname(x$init_params$input_cov), x$init_params$y),
-                          validation = list(unname(val_data_processed), val_data[[2]]))
+                          validation = list(unname(val_data_processed), validation_data[[2]]))
     callbacks <- append(callbacks,
                         auc_cb)
     verbose <- FALSE
@@ -923,9 +923,12 @@ fit.deepregression <- function(
     args$batch_size <- NULL
   }
 
-  if(is.null(generator))
-    ret <- do.call(fit_fun, args) else
-      ret <- do.call(fit_generator, args)
+  if(is.null(generator)){
+    fit_keras <- utils::getFromNamespace("fit.keras.engine.training.Model", "keras")
+    ret <- do.call(fit_keras, args) 
+  }else{
+    ret <- do.call(fit_generator, args)
+  }
   if(save_weights) ret$weighthistory <- weighthistory$weights_last_layer
   invisible(ret)
 }
@@ -1249,7 +1252,8 @@ cv <- function(
     
     args <- append(args, x$init_params$ellipsis)
 
-    ret <- do.call(fit_fun, args)
+    fit_keras <- utils::getFromNamespace("fit.keras.engine.training.Model", "keras")
+    ret <- do.call(fit_keras, args)
     if(save_weights) ret$weighthistory <- weighthistory$weights_last_layer
 
     if(stop_if_nan && any(is.nan(ret$metrics$validloss)))
