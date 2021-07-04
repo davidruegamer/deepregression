@@ -249,5 +249,5 @@ normalize_callbacks_with_metrics_custom <- function (view_metrics, callbacks)
   if (!is.null(callbacks) && !is.list(callbacks))
     callbacks <- list(callbacks)
   callbacks <- append(callbacks, KerasMetricsCallback_custom$new(view_metrics))
-  normalize_callbacks(callbacks)
+  utils::getFromNamespace("normalize_callbacks", "keras")(callbacks)
 }
