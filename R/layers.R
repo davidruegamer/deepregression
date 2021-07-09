@@ -102,12 +102,16 @@ layer_factor <- function(nlev, units = 1, activation = "linear", use_bias = FALS
                          kernel_regularizer = NULL)
 {
   
-  ret_fun <- function(x) tf$one_hot(tf$cast(x[,1], dtype="int32"), depth = nlev) %>% layer_dense(
-    units = units,
-    activation = activation,
-    use_bias = use_bias,
-    name = name,
-    kernel_regularizer = kernel_regularizer)
+  ret_fun <- function(x) layer_dense(tf$squeeze(
+    tf$one_hot(tf$cast(x, dtype="int32"), 
+               depth = as.integer(nlev)),
+    axis=1L
+  ),
+  units = units,
+  activation = activation,
+  use_bias = use_bias,
+  name = name,
+  kernel_regularizer = kernel_regularizer)
   return(ret_fun)
   
 }
