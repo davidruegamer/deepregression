@@ -1028,9 +1028,9 @@ coef.deepregression <- function(
         if(slas %in% layer_names)
           lret[[j]]$structured_lasso <- object$model$get_layer(slas)$get_weights()[[1]] else
             lret[[j]]$structured_lasso <- 
-              rbind(object$model$get_layer(tl)$get_weights()[[2]],
+              rbind(object$model$get_layer(paste0("intercept_", i))$get_weights()[[1]],
                     object$model$get_layer(tl)$get_weights()[[1]] *
-                      matrix(rep(object$model$get_layer(tl)$get_weights()[[3]], 
+                      matrix(rep(object$model$get_layer(tl)$get_weights()[[2]], 
                                  each=ncol(object$model$get_layer(tl)$get_weights()[[1]])), 
                                  ncol=ncol(object$model$get_layer(tl)$get_weights()[[1]]), byrow = TRUE))
     }else{

@@ -915,13 +915,17 @@ deepregression_init <- function(
                                       is.null(lambda_ridge[[i]])){
                                      # l1 = tf$keras$regularizers$l1(l=lambda_lasso[[i]])
                                      lasso_layer <- tib_layer(
-                                       input_dim = ncol_structured[i],
                                        units = as.integer(output_dim[i]),
                                        use_bias = use_bias_in_structured,
                                        la = lambda_lasso[[i]],
                                        name = paste0("tib_lasso_", i)
                                      )
-                                     return(inputs_struct[[i]] %>% lasso_layer)
+                                     return(tf$add(
+                                       lasso_layer(tf_stride_cols(inputs_struct[[i]],2,inputs_struct[[i]]$shape[[2]])),
+                                       layer_dense(units=as.integer(output_dim[i]), name = paste0("intercept_",i),
+                                                   use_bias=FALSE)(
+                                         tf_stride_cols(inputs_struct[[i]],1))
+                                       ))
                                    }else if(!is.null(lambda_ridge[[i]]) &
                                             is.null(lambda_lasso[[i]])){
                                      l2 = tf$keras$regularizers$l2(l=lambda_ridge[[i]])
