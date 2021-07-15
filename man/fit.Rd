@@ -2,15 +2,15 @@
 % Please edit documentation in R/methods.R
 \name{fit}
 \alias{fit}
-\title{Generic fit function}
+\title{Generic train function}
 \usage{
-fit(x, ...)
+fit(object, ...)
 }
 \arguments{
-\item{x}{object}
-
 \item{...}{further arguments passed to the class-specific function}
+
+\item{x}{object}
 }
 \description{
-Generic fit function
+Generic train function
 }

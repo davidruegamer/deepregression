@@ -12,9 +12,9 @@ Config/reticulate:
   list(
     packages = list(
       list(package = "six", pip = TRUE),
-      list(package = "tensorflow", version = "2.1", pip = TRUE),
-      list(package = "tensorflow_probability", version = "0.9", pip = TRUE),
-      list(package = "keras", version = "2.4.3", pip = TRUE))
+      list(package = "tensorflow", version = "2.5.0rc0", pip = TRUE),
+      list(package = "tensorflow_probability", version = "0.12", pip = TRUE),
+      list(package = "keras", version = "2.5.0rc0", pip = TRUE))
   )
 Depends: R (>= 4.0.0)
 Suggests:

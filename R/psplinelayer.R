@@ -6,9 +6,7 @@
 #' @param name An optional name string for the layer (should be unique).
 #' @param trainable logical, whether the layer is trainable or not.
 #' @param input_shape Input dimensionality not including samples axis.
-#' @param regul if set to 0, no regularization is applied
-#' @param Ps list of penalty matrices times lambdas
-#' @param use_bias whether or not to use a bias in the layer. Default is FALSE.
+#' @param P a penalty matrix
 #' @param kernel_initializer function to initialize the kernel (weight). Default
 #' is "glorot_uniform".
 #' @param bias_initializer function to initialize the bias. Default is 0.
@@ -17,23 +15,19 @@
 #' @param diffuse_scale diffuse scale prior for scalar weights
 #' @param posterior_fun function defining the variational posterior
 #' @param output_dim the number of units for the layer
-#' @param k_summary keras function for the penalty (see \code{?deepregression} for details)
 #' @param ... further arguments passed to \code{args} used in \code{create_layer}
 layer_spline <- function(object,
                          name = NULL,
                          trainable = TRUE,
                          input_shape,
                          regul = NULL,
-                         Ps,
-                         use_bias = FALSE,
+                         P,
                          kernel_initializer = 'glorot_uniform',
-                         bias_initializer = 'zeros',
                          variational = FALSE,
                          # prior_fun = NULL,
                          posterior_fun = NULL,
                          diffuse_scale = 1000,
                          output_dim = 1L,
-                         k_summary = k_sum,
                          ...) {
 
   if(variational){
@@ -78,9 +72,9 @@ layer_spline <- function(object,
 
     }else{
 
-      class <- k$layers$Dense
+      class <- tf$keras$layers$Dense
       args$kernel_initializer=kernel_initializer
-      args$bias_initializer=bias_initializer
+      args$bias_initializer='zeros'
 
     }
 
@@ -170,7 +164,7 @@ get_layers_from_s <- function(this_param, nr=NULL, variational=FALSE,
     mask <- as.list(rep(0,zeros))
     mask <- c(mask, as.list(rep(1,length(lambdas)-zeros)))
   }else{
-    masl <- as.list(rep(1,length(lambdas)))
+    mask <- as.list(rep(1,length(lambdas)))
   }
   
   name <- "structured_nonlinear"
@@ -297,6 +291,13 @@ tf_block_diag <- function(listMats)
 #                            )
 # )
 
+layer_spline = function(units = 1L, P, name) {
+  python_path <- system.file("python", package = "deepregression")
+  splines <- reticulate::import_from_path("psplines", path = python_path)
+  
+  return(splines$layer_spline(P = as.matrix(P), units = units, name = name))
+}
+
 trainable_pspline = function(units, this_lambdas, this_mask, this_P, this_n, this_nr) {
   python_path <- system.file("python", package = "deepregression")
   splines <- reticulate::import_from_path("psplines", path = python_path)
@@ -311,40 +312,6 @@ trainable_pspline = function(units, this_lambdas, this_mask, this_P, this_n, thi
 #   
 #   return(splines$kerasGAM(inputs, outputs))
 # }
-
-#' Options for Fellner-Schall algorithm
-#'
-#' @param factor a factor defining how much of the past is used for the Fellner-Schall
-#' algorithm; defaults to 0.01. 
-#' @param lr_scheduler a scheduler adapting
-#' \code{factor} in each step; defaults to \code{NULL}.
-#' @param avg_over_past logical, whether the beta coefficients should be averaged 
-#' over the past values to stabilize estimation; defaults to \code{FALSE}
-#' @param constantdiv small positive constant to stabilize training
-#' in small batch regimes; defaults to 0.0.
-#' @param constantinv small positive constant to stabilize training
-#' in small batch regimes; defaults to 0.0.
-#' @param constinv_scheduler scheduler for \code{constantinv}; per default 
-#' NULL which results in an exponential decay with rate 1 
-#' @return Returns a list with options
-#' @export
-#'
-fsbatch_control <- function(factor = 0.01,
-                            lr_scheduler = NULL,
-                            avg_over_past = FALSE,
-                            constantdiv = 0,
-                            constantinv = 0,
-                            constinv_scheduler = NULL)
-{
-  
-  return(list(factor = factor,
-              lr_scheduler = lr_scheduler,
-              avg_over_past = avg_over_past,
-              constantdiv = constantdiv,
-              constantinv = constantinv,
-              constinv_scheduler = constinv_scheduler))
-  
-}
 
 build_kerasGAM = function(factor, lr_scheduler, avg_over_past, constantdiv = 0, constantinv = 0, constinv_scheduler = NULL) {
   python_path <- system.file("python", package = "deepregression")

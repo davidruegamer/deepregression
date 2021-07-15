@@ -1,4 +1,4 @@
-# function that extracts variables from special symbols in formulae
+# function that extracts variables from special symbols in formulas
 extract_from_special <- function(x)
 {
   if(length(x)>1) return(sapply(x, extract_from_special))
@@ -14,6 +14,150 @@ extract_from_special <- function(x)
              split = ",")[[1]]
   )
 }
+
+#' Function to define orthogonalization connections in the formula
+#' 
+#' @param form a formula for one distribution parameter
+#' @return Returns a list of formula components with ids and 
+#' assignments for orthogonalization
+#' 
+#' 
+separate_define_relation <- function(form, specials, specials_to_oz, automatic_oz_check = TRUE)
+{
+  
+  tf <- terms.formula(form, specials = specials)
+  has_intercept <- attr(tf, "intercept")
+  trmstrings <- attr(tf, "term.labels")
+  if(length(trmstrings)==0 & has_intercept)
+    return(
+      list(list(
+        term = "(Intercept)",
+        nr = 1,
+        left_from_oz = TRUE,
+        right_from_oz = NULL
+      ))
+    )
+  variables_per_trmstring <- sapply(trmstrings, function(x) all.vars(as.formula(paste0("~",x))))
+  manual_oz <- grepl("%OZ%", trmstrings)
+  # do a check for automatic OZ if defined
+  # and add it via the %OZ% operator
+  if(automatic_oz_check){
+    # if no specials_to_oz are present, return function call without automatic oz
+    if(is.null(specials_to_oz) | length(specials_to_oz)==0)
+      return(separate_define_relation(form, specials = specials, 
+                                      specials_to_oz = specials_to_oz,
+                                      automatic_oz_check = FALSE))
+    # otherwise start checking
+    oz_to_add <- rep(list(NULL), length(trmstrings))
+    for(i in 1:length(trmstrings)){
+      
+      if(any(sapply(specials_to_oz, function(nn) grepl(paste0(nn,"\\(.*\\)"), trmstrings[i]))) & 
+         !manual_oz[i]){
+        # term is checked for automatic orthogonalization
+        # find structured term with same variable
+        these_vars <- variables_per_trmstring[[i]]
+        these_terms <- trmstrings[sapply(1:length(trmstrings), function(j){ 
+          !manual_oz[j] & 
+            any(sapply(these_vars, function(tv) tv%in%variables_per_trmstring[[j]])) & 
+            i != j
+        })]
+        if(has_intercept) these_terms <- c("1", these_terms)
+        if(length(these_terms)>0) oz_to_add[[i]] <- 
+          paste0(" %OZ% (", paste(these_terms, collapse = "+"), ")")
+        
+      }
+    }
+    no_changes <- sapply(oz_to_add,is.null)
+    if(any(!no_changes)){
+      trmstrings[!no_changes] <- mapply(function(x,y) paste0(x, y), 
+                                        trmstrings[!no_changes],
+                                        oz_to_add[!no_changes])
+      form <- as.formula(paste0("~ ", paste(trmstrings, collapse = " + ")))
+      return(separate_define_relation(form, specials = specials, 
+                                      specials_to_oz = specials_to_oz,
+                                      automatic_oz_check = FALSE))
+    }
+  }
+  # define which terms are related to which other terms due to OZ
+  terms <- strsplit(trmstrings, "%OZ%", fixed=TRUE)
+  terms_left <- lapply(terms, function(x) trimws(x[[1]]))
+  terms_right <- lapply(terms, function(trm){
+    if(length(trm)>1) remove_brackets(trimws(trm[[2]])) else return(NULL)
+  }) 
+  terms_right <- lapply(terms_right, function(trm)
+  {
+    if(is.null(trm)) return(NULL)
+    return(trimws(strsplit(trm, "+", fixed=TRUE)[[1]]))
+  })
+
+  terms <- lapply(1:length(terms_left), function(i) 
+    list(term = terms_left[[i]],
+         nr = i,
+         left_from_oz = TRUE,
+         right_from_oz = c()
+    ))
+      
+  add_terms <- list()
+  j <- 1
+  
+  for(i in 1:length(terms_right)){
+    
+    if(is.null(terms_right[[i]])) next
+    for(k in 1:length(terms_right[[i]])){
+      
+      is_already_left <- is_equal_not_null(terms_right[[i]][[k]], sapply(terms, "[[", "term"))
+      is_already_right <- FALSE
+      if(length(add_terms)>0)
+        is_already_right <- is_equal_not_null(terms_right[[i]][[k]], sapply(add_terms, "[[", "term"))
+      if(any(is_already_left)){
+        terms[[which(is_already_left)]]$right_from_oz <- 
+          c(terms[[which(is_already_left)]]$right_from_oz, i)
+      }else if(any(is_already_right)){
+        add_terms[[which(is_already_right)]]$right_from_oz <- 
+          c(add_terms[[which(is_already_right)]]$right_from_oz, i)
+      }else{ # add
+        add_terms[[j]] <- list(
+          term = terms_right[[i]][[k]],
+          nr = length(terms) + j,
+          left_from_oz = FALSE,
+          right_from_oz = i
+        )
+        j <- j + 1
+      }
+      
+    }
+    
+  }
+  
+  terms <- c(terms, add_terms)
+  
+  if(has_intercept){
+    
+    terms[[which(sapply(terms, "[[", "term")=="1")]]$left_from_oz <- TRUE
+    
+  }
+  
+  return(terms)
+  
+}
+
+
+remove_brackets <- function(x)
+{
+  
+  if(grepl("^\\(", x))
+    return(gsub("^\\(","",gsub("\\)$","",x))) else return(x)
+  
+}
+
+is_equal_not_null <- function(x,y)
+{
+  
+  if(is.null(y)) return(FALSE) else return(x==y)
+  
+}
+
+
 # convert sparse matrix to sparse tensor
 sparse_mat_to_tensor <- function(X)
 {
@@ -178,9 +322,9 @@ fac_to_int_representation <- function(data)
   
 }
 
+# TODO: ADD fac, lasso ridge fm offset
 # get contents from formula
 get_contents <- function(lf, data, df,
-                         variable_names,
                          network_names,
                          intercept = TRUE,
                          defaultSmoothing = NULL,
@@ -190,13 +334,25 @@ get_contents <- function(lf, data, df,
                          sp_scale = 1, 
                          anisotropic = TRUE,
                          image_var = list(),
-                         nr_param)
+                         nr_param,
+                         zero_constraint_for_smooths = TRUE,
+                         variational_options = list())
   {
   # extract which parts are modelled as deep parts
   # which by smooths, which linear
   if(is.character(lf)) lf <- as.formula(lf)
   
-  specials <- c("s", "te", "ti", network_names, "vc", "vvc")
+  # get variable_names
+  variable_names <- names(data)
+  if(is.null(variable_names) | any(variable_names==""))
+    stop("If data is a list, names must be given.")
+  
+  specials <- c("s", "te", "ti", "vc", "vvc", "fac", "lasso", "ridge", "fm", "offset", "vi", network_names)
+  overlap <- setdiff(specials[-length(specials)], netnames)
+  
+  if(length(overlap)>0)
+    stop("Please rename networks in the list of deep models with name", paste(overlap, collapse=", "), ".")
+  
   tf <- terms.formula(lf, specials=specials, data=data)
 
   if(length(attr(tf, "term.labels"))==0){
@@ -319,8 +475,6 @@ get_contents <- function(lf, data, df,
   {
     names_sTerms <- names(sTerms)
     terms_w_s <- lapply(names(sTerms), extract_from_special)
-    by_vars <- lapply(terms_w_s, function(x) sapply(x, function(y){
-      if(grepl("by.*\\=",y)) return(trimws(gsub("by.*\\=(.*)","\\1",y))) else return(y)}))
     terms_w_s <- lapply(terms_w_s, function(x) sapply(x, function(y){
       if(grepl("by.*\\=",y)) return(trimws(gsub("by.*\\=(.*)","\\1",y))) else return(y)}))
     terms_w_s <- lapply(terms_w_s, function(x) x[!grepl("=", x, fixed=T)])
@@ -558,6 +712,13 @@ get_contents <- function(lf, data, df,
            intercept = intercept,
            defaultSmoothing = defaultSmoothing)
     )
+  
+  # check for zero ncol linterms
+  if(NCOL(ret$linterms)==0) ret$linterms <- list(NULL)
+  
+  # orthognalize smooths
+  ret <- orthog_smooth(ret, zero_cons = zero_constraint_for_smooths)
+  attr(ret,"zero_cons") <- zero_constraint_for_smooths
 
   return(ret)
 }
@@ -573,7 +734,6 @@ get_contents_newdata <- function(pcf, newdata)
 
 make_cov <- function(pcf,
                      newdata=NULL,
-                     convertfun = as.matrix,
                      pred = !is.null(newdata), 
                      olddata=NULL,
                      orthogonalize = TRUE,
@@ -668,7 +828,7 @@ make_cov <- function(pcf,
     lapply(input_cov[which(input_cov_isdf)], as.matrix)
   which_to_convert <- !sapply(input_cov,function(ic){is.factor(ic) | 
       any(class(ic)=="placeholder") | length(dim(ic))>2})
-  input_cov[which_to_convert] <- lapply(input_cov[which_to_convert], convertfun)
+  input_cov[which_to_convert] <- lapply(input_cov[which_to_convert], as.matrix)
   
   ### OZ
   
@@ -683,22 +843,8 @@ make_cov <- function(pcf,
   ox <- unlist(lapply(ox, function(x_per_param)
     if(is.null(x_per_param)) return(NULL) else
       (lapply(x_per_param[!sapply(x_per_param,is.null)], function(x)
-        convertfun(x)))), recursive=F)
+        as.matrix(x)))), recursive=F)
 
-    # if(!is.null(index)){
-    #   ox <- unlist(lapply(ox, function(x_per_param)
-    #     if(is.null(x_per_param)) return(NULL) else
-    #       unlist(lapply(x_per_param[!sapply(x_per_param,is.null)], function(xox)
-    #         convertfun(as.matrix(xox)[index,,drop=FALSE])))),
-    #     recursive=F)
-    # }
-    # if(is.null(index) & !pred){
-    #   ox <- unlist(lapply(ox, function(x_per_param)
-    #     if(is.null(x_per_param)) return(NULL) else
-    #       lapply(x_per_param[!sapply(x_per_param,is.null)], function(x)
-    #         convertfun(x))), recursive=F)
-    # }
-  
   input_cov <- 
     append(
       c(unname(input_cov)),unname(ox[!sapply(ox, is.null)]))
@@ -798,27 +944,6 @@ get_indices <- function(x)
       )
 }
 
-prepare_newdata <- function(pfc, data, pred = FALSE, 
-                            # index = NULL, cv = FALSE,
-                            convertfun = as.matrix,
-                            orthogonalize,
-                            ...)
-{
-  n_obs <- nROW(data)
-  zcons <- sapply(pfc, function(x) attr(x, "zero_cons"))
-  if(any(zcons) & is.null(data))
-  {
-    pfc[which(zcons)] <-
-      lapply(pfc[which(zcons)], orthog_smooth, TRUE)
-    # for(z in zcons) attr(pfc[[z]], "zero_cons") <- TRUE
-  }
-  newdata_processed <- make_cov(pfc, data, pred = pred,
-                                convertfun = convertfun,
-                                orthogonalize = orthogonalize,
-                                ...)
-  
-  return(newdata_processed)
-}
 
 coefkeras <- function(model)
 {

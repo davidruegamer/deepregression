@@ -2,7 +2,7 @@ context("get_contents")
 
 test_that("get_contents", {
   nms = c("a", "b", "c", "x", "")
-  # Set up a grid of formulae to test.
+  # Set up a grid of formulas to test.
   gr = expand.grid(
     c("1", ""), nms, nms,
     c(paste0(sample(c("s(", "te(", "ti("), 1), sample(nms[-5], 1), ")"), ""),

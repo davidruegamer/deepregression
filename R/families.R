@@ -164,87 +164,90 @@ make_tfd_dist <- function(family, add_const = 1e-8,
   if(is.null(trafo_list))
     trafo_list <- switch(family,
                          normal = list(function(x) x,
-                                       function(x) add_const + tfe(x)),
+                                       function(x) tf$add(add_const, tfe(x))),
                          bernoulli = list(function(x) x),
                          bernoulli_prob = list(function(x) tfsig(x)),
-                         beta = list(function(x) add_const + tfe(x),
-                                     function(x) add_const + tfe(x)),
+                         beta = list(function(x) tf$add(add_const, tfe(x)),
+                                     function(x) tf$add(add_const, tfe(x))),
                          betar = list(function(x) x,
                                       function(x) x),
                          binomial = list(), # tbd
                          categorial = list(), #tbd
                          cauchy = list(function(x) x,
-                                       function(x) add_const + tfe(x)),
-                         chi2 = list(function(x) add_const + tfe(x)),
-                         chi = list(function(x) add_const + tfe(x)),
+                                       function(x) tf$add(add_const, tfe(x))),
+                         chi2 = list(function(x) tf$add(add_const, tfe(x))),
+                         chi = list(function(x) tf$add(add_const, tfe(x))),
                          dirichlet_multinomial = list(), #tbd
                          dirichlet = list(), #tbd
-                         exponential = list(function(x) add_const + tfe(x)),
+                         exponential = list(function(x) tf$add(add_const, tfe(x))),
                          gamma_gamma = list(), #tbd
-                         gamma = list(function(x) add_const + tfe(x),
-                                      function(x) add_const + tfe(x)),
+                         gamma = list(function(x) tf$add(add_const, tfe(x)),
+                                      function(x) tf$add(add_const, tfe(x))),
                          geometric = list(function(x) x),
                          gammar = list(function(x) x,
                                        function(x) x),
                          gumbel = list(function(x) x,
-                                       function(x) add_const + tfe(x)),
+                                       function(x) tf$add(add_const, tfe(x))),
                          half_cauchy = list(function(x) x,
-                                            function(x) add_const + tfe(x)),
-                         half_normal = list(function(x) add_const + tfe(x)),
-                         horseshoe = list(function(x) add_const + tfe(x)),
-                         inverse_gamma = list(function(x) add_const + tfe(x),
-                                              function(x) add_const + tfe(x)),
-                         inverse_gamma_ls = list(function(x) add_const + tfe(x),
-                                              function(x) add_const + tfe(x)),
-                         inverse_gaussian = list(function(x) add_const + tfe(x),
+                                            function(x) tf$add(add_const, tfe(x))),
+                         half_normal = list(function(x) tf$add(add_const, tfe(x))),
+                         horseshoe = list(function(x) tf$add(add_const, tfe(x))),
+                         inverse_gamma = list(function(x) tf$add(add_const, tfe(x)),
+                                              function(x) tf$add(add_const, tfe(x))),
+                         inverse_gamma_ls = list(function(x) tf$add(add_const, tfe(x)),
+                                              function(x) tf$add(add_const, tfe(x))),
+                         inverse_gaussian = list(function(x) tf$add(add_const, tfe(x)),
                                                  function(x)
-                                                   add_const + tfe(x)),
+                                                   tf$add(add_const, tfe(x))),
                          kumaraswamy = list(), #tbd
                          laplace = list(function(x) x,
-                                        function(x) add_const + tfe(x)),
+                                        function(x) tf$add(add_const, tfe(x))),
                          log_normal = list(function(x) x,
-                                           function(x) add_const + tfe(x)),
+                                           function(x) tf$add(add_const, tfe(x))),
                          logistic = list(function(x) x,
-                                         function(x) add_const + tfe(x)),
-                         negbinom = list(function(x) add_const + tfe(x),
+                                         function(x) tf$add(add_const, tfe(x))),
+                         negbinom = list(function(x) tf$add(add_const, tfe(x)),
                                          function(x) tf$math$sigmoid(x)),
-                         negbinom_ls = list(function(x) add_const + tfe(x),
-                                            function(x) add_const + tfe(x)),
+                         negbinom_ls = list(function(x) tf$add(add_const, tfe(x)),
+                                            function(x) tf$add(add_const, tfe(x))),
                          multinomial = list(function(x) tfsoft(x)),
                          multinoulli = list(function(x) x),
-                         pareto = list(function(x) add_const + tfe(x),
+                         pareto = list(function(x) tf$add(add_const, tfe(x)),
                                        function(x) add_const + tfe(-x)),
-                         pareto_ls = list(function(x) add_const + tfe(x),
-                                       function(x) add_const + tfe(x)),
-                         poisson = list(function(x) add_const + tfe(x)),
+                         pareto_ls = list(function(x) tf$add(add_const, tfe(x)),
+                                       function(x) tf$add(add_const, tfe(x))),
+                         poisson = list(function(x) tf$add(add_const, tfe(x))),
                          poisson_lograte = list(function(x) x),
                          student_t = list(function(x) x),
-                         student_t_ls = list(function(x) add_const + tfe(x),
+                         student_t_ls = list(function(x) tf$add(add_const, tfe(x)),
                                              function(x) x,
-                                             function(x) add_const + tfe(x)),
+                                             function(x) tf$add(add_const, tfe(x))),
                          truncated_normal = list(), # tbd
                          uniform = list(function(x) x,
                                         function(x) x),
                          von_mises = list(function(x) x,
-                                          function(x) add_const + tfe(x)),
-                         zinb = list(function(x) add_const + tfe(x),
-                                     function(x) add_const + tfe(x),
+                                          function(x) tf$add(add_const, tfe(x))),
+                         zinb = list(function(x) tf$add(add_const, tfe(x)),
+                                     function(x) tf$add(add_const, tfe(x)),
                                      function(x) tf$stack(list(tf$math$sigmoid(x),
-                                                               1-tf$math$sigmoid(x)),
+                                                               tf$subtract(1,tf$math$sigmoid(x))),
                                                           axis=2L)),
-                         zip = list(function(x) add_const + tfe(x),
+                         zip = list(function(x) tf$add(add_const, tfe(x)),
                                     function(x) tf$stack(list(tf$math$sigmoid(x),
-                                                              1-tf$math$sigmoid(x)),
+                                                              tf$subtract(1,tf$math$sigmoid(x))),
                                                          axis=2L)),
                          zipf = list(function(x) 1 + tfe(x))
     )
 
-
+  # check if still NULL, then probably wrong family
+  if(is.null(trafo_list))
+    stop("Family not implemented.")
+  
   ret_fun <- function(x) do.call(tfd_dist,
-                                 lapply(1:ncol(x)[[1]],
+                                 lapply(1:x$shape[[2]],
                                         function(i)
                                           trafo_list[[i]](
-                                            x[,i,drop=FALSE])))
+                                            tf_stride_cols(x,i))))
 
   if(family=="multinomial"){
 
@@ -257,8 +260,7 @@ make_tfd_dist <- function(family, add_const = 1e-8,
 
   }
 
-  # return number of parameters if specified
-  if(return_nrparams) return(length(trafo_list))
+  attr(ret_fun, "nrparams_dist") <- length(trafo_list)
 
   return(ret_fun)
 
@@ -316,8 +318,8 @@ family_trafo_funs_special <- function(family, add_const = 1e-8)
       # rate = 1/((sigma^2)*mu)
       # con = (1/sigma^2)
 
-      mu = tfe(x[,1,drop=FALSE])
-      sig = tfe(x[,2,drop=FALSE])
+      mu = tfe(tf_stride_cols(x,1))
+      sig = tfe(tf_stride_cols(x,2))
       # con = #tf$compat$v2$maximum(
       #   tfrec(tfsq(sig))#,0 + add_const)
       # rate = #tf$compat$v2$maximum(
@@ -335,15 +337,15 @@ family_trafo_funs_special <- function(family, add_const = 1e-8)
 
       # mu=a/(a+b)
       # sig=(1/(a+b+1))^0.5
-      mu = tfsig(x[,1,drop=FALSE])
-      sigsq = tfsq(tfsig(x[,2,drop=FALSE]))
+      mu = tfsig(tf_stride_cols(x,1))
+      sigsq = tfsq(tfsig(tf_stride_cols(x,2)))
       #a = tf$compat$v2$maximum(tfmult(mu, (tfrec(sigsq) - 1)), 1 + add_const)
       #b = tf$compat$v2$maximum(tfmult((tfrec(mu) - 1), a), 1 + add_const)
       a = tf$compat$v2$maximum(
-        tfmult(mu, tfdiv(tf$constant(1) - sigsq, sigsq)),
+        tfmult(mu, tfdiv(tf$subtract(tf$constant(1), sigsq), sigsq)),
         tf$constant(0) + add_const)
       b = tf$compat$v2$maximum(
-        tfmult(a, tfdiv(tf$constant(1) - mu,mu)),
+        tfmult(a, tfdiv(tf$subtract(tf$constant(1), mu),mu)),
         tf$constant(0) + add_const)
 
       return(list(concentration1 = a, concentration0 = b))
@@ -351,9 +353,9 @@ family_trafo_funs_special <- function(family, add_const = 1e-8)
     pareto_ls = function(x){
       
       # k_print_tensor(x, message = "This is x")
-      scale = add_const + tfe(x[,1,drop=FALSE])
+      scale = add_const + tfe(tf_stride_cols(x,1))
       # k_print_tensor(scale, message = "This is scale")
-      con = tfe(-x[,2,drop=FALSE])
+      con = tfe(-tf_stride_cols(x,2))
       # k_print_tensor(con, message = "This is con")
       return(list(concentration = con, scale = scale)) 
       
@@ -362,9 +364,9 @@ family_trafo_funs_special <- function(family, add_const = 1e-8)
     inverse_gamma_ls = function(x){
       
       # alpha = 1/sigma^2
-      alpha = add_const + tfe(-x[,2,drop=FALSE])
+      alpha = add_const + tfe(-tf_stride_cols(x,2))
       # beta = mu (alpha + 1)
-      beta = add_const + tfe(x[,1,drop=FALSE]) * (alpha + 1)
+      beta = add_const + tfe(tf_stride_cols(x,1)) * (alpha + 1)
       
       return(list(concentration = alpha, scale = beta)) 
       
@@ -398,12 +400,12 @@ family_trafo_funs_special <- function(family, add_const = 1e-8)
 mix_dist_maker <- function(
   dist = tfd_normal,
   nr_comps = 3,
-  trafos_each_param = list(function(x) x, function(x) 1e-8 + tfe(x))
+  trafos_each_param = list(function(x) x, function(x) tf$add(1e-8, tfe(x)))
   ){
 
   stack <- function(x,ind=1:nr_comps) tf$stack(
     lapply(ind, function(j)
-      x[,j,drop=FALSE]), 2L)
+      tf_stride_cols(x,j)), 2L)
 
   mixdist = function(probs, params)
   {
@@ -426,11 +428,11 @@ mix_dist_maker <- function(
         lapply(1:length(trafos_each_param),
                function(i)
                  stack(trafos_each_param[[i]](
-                   x[, nr_comps +
-                       # first x for pis
-                       (i-1)*nr_comps +
-                       # then for each parameter
-                       (1:nr_comps),drop=FALSE]
+                   tf_stride_cols(x,nr_comps +
+                                    # first x for pis
+                                    (i-1)*nr_comps +
+                                    # then for each parameter
+                                    (1:nr_comps))
                  )
                  )
         )
@@ -468,7 +470,7 @@ tfd_negative_binomial_ls = function(mu, r){
   # sig2 <- mu + (mu*mu / r)
   # count <- r
   probs <- #1-tf$compat$v2$clip_by_value(
-    r / (r + mu)#,
+    tf$divide(r, tf$add(r, mu))#,
     # 0, 1
   # )
   
@@ -521,7 +523,7 @@ multinorm_maker <- function(dim = 2,
 
   ind_diag <- seq(1,dim^2,by=dim+1)
 
-  scale_tr <- function(x) add_const + tfe(x)
+  scale_tr <- function(x) tf$add(add_const, tfe(x))
 
   if(with_cov){
 

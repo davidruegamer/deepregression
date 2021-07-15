@@ -6,70 +6,24 @@
 \usage{
 deepregression(
   y,
-  list_of_formulae,
+  list_of_formulas,
   list_of_deep_models,
-  family = c("normal", "bernoulli", "bernoulli_prob", "beta", "betar", "cauchy",
-    "chi2", "chi", "exponential", "gamma_gamma", "gamma", "gammar", "gumbel",
-    "half_cauchy", "half_normal", "horseshoe", "inverse_gamma", "inverse_gamma_ls",
-    "inverse_gaussian", "laplace", "log_normal", "logistic", "multinomial",
-    "multinoulli", "negbinom", "negbinom_ls", "pareto", "pareto_ls", "poisson",
-    "poisson_lograte", "student_t", "student_t_ls", "truncated_normal", "uniform",
-    "zinb", "zip", "transformation_model"),
+  family = "normal",
   train_together = list(),
   data,
-  image_var = list(),
-  dim_deep = NULL,
-  df = NULL,
-  lambda_lasso = NULL,
-  lambda_ridge = NULL,
-  convert_factors = FALSE,
-  defaultSmoothing = NULL,
-  cv_folds = NULL,
-  validation_data = NULL,
-  validation_split = ifelse(is.null(validation_data) & is.null(cv_folds), 0.2, 0),
-  dist_fun = NULL,
-  learning_rate = 0.01,
-  optimizer = optimizer_adam(lr = learning_rate),
-  fsbatch_optimizer = FALSE,
-  fsbatch_options = fsbatch_control(),
-  variational = FALSE,
-  monitor_metric = list(),
-  seed = 1991 - 5 - 4,
-  tf_seed = NULL,
-  mixture_dist = 0,
-  split_fun = split_model,
-  posterior_fun = posterior_mean_field,
-  prior_fun = prior_trainable,
-  null_space_penalty = variational,
-  ind_fun = function(x) tfd_independent(x),
-  extend_output_dim = 0,
-  offset = NULL,
-  offset_val = NULL,
-  absorb_cons = FALSE,
-  anisotropic = TRUE,
-  zero_constraint_for_smooths = TRUE,
-  orthog_type = c("tf", "manual"),
-  orthogonalize = TRUE,
-  hat1 = FALSE,
-  sp_scale = NROW(y),
-  order_bsp = NULL,
-  y_basis_fun = function(y) eval_bsp(y, order = order_bsp, supp = range(y)),
-  y_basis_fun_prime = function(y) eval_bsp_prime(y, order = order_bsp, supp =
-    range(y))/diff(range(y)),
-  split_between_shift_and_theta = NULL,
-  addconst_interaction = NULL,
-  additional_penalty = NULL,
-  penalty_summary = k_sum,
-  convertfun = as.matrix,
-  compile_model = TRUE,
-  base_distribution = "normal",
+  tf_seed = as.integer(1991 - 5 - 4),
+  return_prepoc = FALSE,
+  subnetwork_builder = subnetwork_init,
+  model_builder = keras_dr,
+  smooth_options = smooth_control(),
+  orthog_options = orthog_control(),
   ...
 )
 }
 \arguments{
 \item{y}{response variable}
 
-\item{list_of_formulae}{a named list of right hand side formulae,
+\item{list_of_formulas}{a named list of right hand side formulas,
 one for each parameter of the distribution specified in \code{family};
 set to \code{~ 1} if the parameter should be treated as constant.
 Use the \code{s()}-notation from \code{mgcv} for specification of
@@ -86,163 +40,31 @@ specifying a keras model.
 See the examples for more details.}
 
 \item{family}{a character specifying the distribution. For information on
-possible distribution and parameters, see \code{\link{make_tfd_dist}}}
+possible distribution and parameters, see \code{\link{make_tfd_dist}}. Can also 
+be a custom distribution}
 
-\item{train_together}{a list of formulae of the same length as \code{list_of_formulae}
+\item{train_together}{a list of formulas of the same length as \code{list_of_formulas}
 specifying the deep predictors that should be trained together and then the results are;
 fed into different distribution parameters; use the same name for the deep predictor to
 indicate for which distribution parameter they should be used. For example, if the second
 and fourth list entry are \code{~ lstm_mod(text)} then the jointly learned \code{lstm_mod}
 network is added to the linear predictor of the second and fourth distribution parameter.
-Those network names should then be excluded from the \code{list_of_formulae}}
+Those network names should then be excluded from the \code{list_of_formulas}}
 
 \item{data}{data.frame or named list with input features}
 
-\item{image_var}{named list; names correspond to image variables, values for each list item
-corresponds to the input size of the respective image, e.g., \code{list(image = list(c(200,200,3)))}.}
-
-\item{dim_deep}{list for each distribution parameter with NULL or integer vector entries; 
-this is an optional argument to manually specify the input dimensions for the unstructured 
-model part(s) and required if placeholders are used for unstructured data sources. E.g.,
-if the formula contains \code{nn(images)} where \code{images} are ids of images that
-are loaded using a generator, the size of the image is part of the respective}
-
-\item{df}{degrees of freedom for all non-linear structural terms;
-either one common value or a list of the same length as number of parameters and
-each list item a list of the same length as number of smooth terms in the
-respective formula where elements can be vectors for two- or multidimensional smooth terms}
-
-\item{lambda_lasso}{scalar value or list of \code{length(list_of_formulae)};
-smoothing parameter for lasso regression; can be combined with ridge}
-
-\item{lambda_ridge}{scalar value or list of \code{length(list_of_formulae)};
-smoothing parameter for ridge regression; can be combined with lasso}
-
-\item{defaultSmoothing}{function applied to all s-terms, per default (NULL)
-the minimum df of all possible terms is used.}
-
-\item{cv_folds}{a list of lists, each list element has two elements, one for
-training indices and one for testing indices;
-if a single integer number is given,
-a simple k-fold cross-validation is defined, where k is the supplied number.}
-
-\item{validation_data}{data for validation during training.}
-
-\item{validation_split}{percentage of training data used for validation.
-Per default 0.2.}
-
-\item{dist_fun}{a custom distribution applied to the last layer,
-see \code{\link{make_tfd_dist}} for more details on how to construct
-a custom distribution function.}
-
-\item{learning_rate}{learning rate for optimizer}
-
-\item{optimizer}{optimzer used. Per default ADAM.}
-
-\item{fsbatch_optimizer}{logical; use a special optimizer conducting a mini-batch variant of the 
-Fellner-Schall algorithm.}
-
-\item{fsbatch_options}{call to \code{fsbatch_control} with list of options for fsbatch_optimizer.
-See \code{?fsbatch_control} for details.}
-
-\item{variational}{logical value specifying whether or not to use
-variational inference. If \code{TRUE}, details must be passed to
-the via the ellipsis to the initialization function
-(see \code{\link{deepregression_init}})}
-
-\item{monitor_metric}{Further metrics to monitor}
-
-\item{seed}{integer value used as a seed in data splitting}
-
 \item{tf_seed}{a seed for tensorflow (only works with R version >= 2.2.0)}
 
-\item{mixture_dist}{integer either 0 or >= 2. If 0 (default),
-no mixture distribution is fitted. If >= 2, a network is constructed that outputs
-a multivariate response for each of the mixture components.}
+\item{return_prepoc}{logical; if TRUE only the pre-processed data and layers are returned (default FALSE).}
 
-\item{split_fun}{a function separating the deep neural network in two parts
-so that the orthogonalization can be applied to the first part before
-applying the second network part; per default, the function \code{split_model} is
-used which assumes a dense layer as penultimate layer and separates the network
-into a first part without this last layer and a second part only consisting of a
-single dense layer that is fed into the output layer}
+\item{subnetwork_builder}{function to build each subnetwork (network for each distribution parameter;
+per default \code{subnetwork_init})}
 
-\item{posterior_fun}{function defining the posterior function for the variational
-verison of the network}
+\item{model_builder}{function to build the model based on additive predictors (per default \code{keras_dr}).
+In order to work with the methods defined for the class \code{deepregression}, the model should behave
+like a keras model}
 
-\item{prior_fun}{function defining the prior function for the variational
-verison of the network}
-
-\item{null_space_penalty}{logical value;
-if TRUE, the null space will also be penalized for smooth effects.
-Per default, this is equal to the value give in \code{variational}.}
-
-\item{ind_fun}{function applied to the model output before calculating the
-log-likelihood. Per default independence is assumed by applying \code{tfd_independent}.}
-
-\item{extend_output_dim}{integer value >= 0 for extending the output dimension by an
-additive constant. If set to a value > 0, a multivariate response with dimension
-\code{1 + extend_output_dim} is defined.}
-
-\item{offset}{a list of column vectors (i.e. matrix with ncol = 1) or NULLs for each
-parameter, in case an offset should be added to the additive predictor;
-if NULL, no offset is used}
-
-\item{offset_val}{a list analogous to offset for the validation data}
-
-\item{absorb_cons}{logical; adds identifiability constraint to the basisi.
-See \code{?mgcv::smoothCon} for more details.}
-
-\item{anisotropic}{whether or not use anisotropic smoothing (default is TRUE)}
-
-\item{zero_constraint_for_smooths}{logical; the same as absorb_cons,
-but done explicitly. If true a constraint is put on each smooth to have zero mean. Can
-be a vector of \code{length(list_of_formulae)} for each distribution parameter.}
-
-\item{orthog_type}{one of two options; If \code{"manual"}, 
-the QR decomposition is calculated before model fitting, 
-otherwise (\code{"tf"}) a QR is calculated in each batch iteration via TF.
-The first only works well for larger batch sizes or ideally batch_size == NROW(y).}
-
-\item{orthogonalize}{logical; if set to \code{FALSE}, orthogonalization is deactivated}
-
-\item{hat1}{logical; if TRUE, the smoothing parameter is defined by the trace of the hat
-matrix sum(diag(H)), else sum(diag(2*H-HH))}
-
-\item{sp_scale}{positive constant; for scaling the DRO calculated penalty (1 per default)}
-
-\item{order_bsp}{NULL or integer; order of Bernstein polynomials; if not NULL,
-a conditional transformation model (CTM) is fitted.}
-
-\item{y_basis_fun, y_basis_fun_prime}{basis functions for y transformation for CTM case}
-
-\item{split_between_shift_and_theta}{if \code{family == 'transformation_model'} and
-\code{!is.null(train_together)}, \code{split_between_shift_and_theta} is supposed
-to define how many of the last layer's hidden units are used for the shift
-term and how many for the theta term (an integer vector of length 2).}
-
-\item{addconst_interaction}{positive constant;
-a constant added to the additive predictor of the interaction term.
-If \code{NULL}, terms are left unchanged. If 0 and predictors have negative values in their
-design matrix, the minimum value of all predictors is added to ensure positivity.
-If > 0, the minimum value plus the \code{addconst_interaction} is added to each predictor
-in the interaction term.}
-
-\item{additional_penalty}{a penalty that is added to the negative log-likelihood; must be
-a function of the keras model's \code{trainable_weights} (including necessary subsetting) which
-is always called \code{model}}
-
-\item{penalty_summary}{keras function; summary function for the penalty in the spline layer;
-default is \code{k_sum}. Another option could be \code{k_mean}.}
-
-\item{convertfun}{function to convert objects into a matrix or tensor format.}
-
-\item{compile_model}{logical; whether to compile the model or not}
-
-\item{base_distribution}{tfd_distribution or string; the base distribution for 
-transformation models, see \code{?deeptransformation\_init}.}
-
-\item{...}{further arguments passed to the \code{deepregression\_init} function}
+\item{...}{further arguments passed to the \code{model_builder} function}
 }
 \description{
 Fitting Semi-Structured Deep Distributional Regression
@@ -264,15 +86,14 @@ layer_dense(units = 1, activation = "linear")
 y <- rnorm(n) + data$xa^2 + data$x1
 
 mod <- deepregression(
-  list_of_formulae = list(loc = formula, scale = ~ 1),
-  data = data, validation_data = list(data, y), y = y,
-  list_of_deep_models = list(deep_model = deep_model), 
-  df = 6, 
-  tf_seed = 1
+  list_of_formulas = list(loc = formula, scale = ~ 1),
+  data = data, y = y,
+  list_of_deep_models = list(deep_model = deep_model)
 )
 
 # train for more than 10 epochs to get a better model
-mod \%>\% fit(epochs = 10, early_stopping = TRUE)
+mod \%>\% train(epochs = 10, early_stopping = TRUE)
+mod \%>\% fitted()
 mod \%>\% plot()
 mod \%>\% coef()
 

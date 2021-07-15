@@ -4,38 +4,18 @@
 \alias{layer_spline}
 \title{Wrapper function to create spline layer}
 \usage{
-layer_spline(
-  object,
-  name = NULL,
-  trainable = TRUE,
-  input_shape,
-  regul = NULL,
-  Ps,
-  use_bias = FALSE,
-  kernel_initializer = "glorot_uniform",
-  bias_initializer = "zeros",
-  variational = FALSE,
-  posterior_fun = NULL,
-  diffuse_scale = 1000,
-  output_dim = 1L,
-  k_summary = k_sum,
-  ...
-)
+layer_spline(units = 1L, P, name)
 }
 \arguments{
-\item{object}{or layer object.}
+\item{P}{a penalty matrix}
 
 \item{name}{An optional name string for the layer (should be unique).}
+
+\item{object}{or layer object.}
 
 \item{trainable}{logical, whether the layer is trainable or not.}
 
 \item{input_shape}{Input dimensionality not including samples axis.}
-
-\item{regul}{if set to 0, no regularization is applied}
-
-\item{Ps}{list of penalty matrices times lambdas}
-
-\item{use_bias}{whether or not to use a bias in the layer. Default is FALSE.}
 
 \item{kernel_initializer}{function to initialize the kernel (weight). Default
 is "glorot_uniform".}
@@ -45,13 +25,11 @@ is "glorot_uniform".}
 \item{variational}{logical, if TRUE, priors corresponding to the penalties
 and posteriors as defined in \code{posterior_fun} are created}
 
-\item{posterior_fun}{function defining the variational posterior}
-
 \item{diffuse_scale}{diffuse scale prior for scalar weights}
 
-\item{output_dim}{the number of units for the layer}
+\item{posterior_fun}{function defining the variational posterior}
 
-\item{k_summary}{keras function for the penalty (see \code{?deepregression} for details)}
+\item{output_dim}{the number of units for the layer}
 
 \item{...}{further arguments passed to \code{args} used in \code{create_layer}}
 }

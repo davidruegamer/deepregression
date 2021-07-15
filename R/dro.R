@@ -18,13 +18,12 @@ make_psd <- function(x, eps = sqrt(.Machine$double.eps)) {
 # if dmat is large due to the used SVD
 # => we allow for an approximation based on the package rsvd
 DRO <- function(X, df = 4, lambda = NULL, dmat = NULL, # weights,
-                svdtype = c("default", "rsvd"), XtX = NULL,
-                k = 100, q = 3, hat1 = TRUE, ...) {
-
+                svdtype = c("default", "custom"), XtX = NULL,
+                k = 100, q = 3, hat1 = TRUE, custom_svd_fun = NULL, ...) {
+  
   svdtype <- match.arg(svdtype)
-  if(svdtype=="rsvd") svd <- function(A, nu, nv) rsvd::rsvd(A = A, nu = nu, nv = nv,
-                                                            k = 100, q = 3, ...)
-
+  if(svdtype=="custom") svd <- custom_svd_fun
+  
   stopifnot(xor(is.null(df), is.null(lambda)))
   if (!is.null(df)) {
     rank_X <- rankMatrix(X, method = 'qr', warn.t = FALSE)
@@ -41,10 +40,10 @@ DRO <- function(X, df = 4, lambda = NULL, dmat = NULL, # weights,
   if (!is.null(lambda))
     if (lambda == 0)
       return(c(df = rankMatrix(X), lambda = 0))
-
+  
   # Demmler-Reinsch Orthogonalization (cf. Ruppert et al., 2003,
   # Semiparametric Regression, Appendix B.1.1).
-
+  
   ### there may be more efficient ways to compute XtX, but we do this
   ### elsewhere (e.g. in %O%)
   if (is.null(XtX))
@@ -76,16 +75,16 @@ DRO <- function(X, df = 4, lambda = NULL, dmat = NULL, # weights,
   if (!is.null(lambda))
     return(c(df = dfFun(lambda), lambda = lambda))
   if (df >= length(d)) return(c(df = df, lambda = 0))
-
+  
   # search for appropriate lambda using uniroot
   df2l <- function(lambda)
     dfFun(lambda) - df
-
+  
   lambdaMax <- 1e+16
-
+  
   if (df2l(lambdaMax) > 0){
     if (df2l(lambdaMax) > sqrt(.Machine$double.eps))
-    return(c(df = df, lambda = lambdaMax))
+      return(c(df = df, lambda = lambdaMax))
   }
   lambda <- uniroot(df2l, c(0, lambdaMax), tol = sqrt(.Machine$double.eps))$root
   if (abs(df2l(lambda)) > sqrt(.Machine$double.eps))

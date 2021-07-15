@@ -33,17 +33,35 @@ posterior_mean_field <-
 
 prior_pspline <- 
   function(kernel_size,
-           bias_size = 0L,
            dtype = 'float32',
            P) {
-    n <- as.integer(kernel_size + bias_size)
+    n <- as.integer(kernel_size)
     keras_model_sequential() %>% 
       layer_variable(n, dtype = dtype, trainable = TRUE) %>% 
       layer_distribution_lambda(function(t) {
         tfd_multivariate_normal_full_covariance(
-          loc = t,#tf$constant(rep(0, length(t)), dtype="float32"), 
+          loc = tf$zeros(shape = c(n, 1L)), 
           covariance_matrix = tf$constant(P, dtype="float32")
           )
       })
     
   }
+
+prior_dense <- function(kernel_size, 
+                                   bias_size = 0L,
+                                   diffuse_scale = diffuse_scale^2)
+{
+  
+  n <- as.integer(kernel_size + bias_size)
+  keras_model_sequential() %>% 
+    layer_variable(n, trainable = TRUE) %>% 
+    layer_distribution_lambda(function(t) {
+      tfd_independent(
+        tfd_normal(
+          location = tf$zeros(shape = c(n, 1L)),
+          scale = tf$constant(diffuse_scale)
+        )
+      )
+    })
+  
+}

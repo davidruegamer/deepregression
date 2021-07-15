@@ -1,9 +1,3 @@
-orthog_ncol = function(U, X) {
-  python_path <- system.file("python", package = "deepregression")
-  layers <- reticulate::import_from_path("layers", path = python_path)
-  
-  return(layers$orthog_col(U = U, X = X))
-}
 
 orthog_structured <- function(S,L)
 {
@@ -31,6 +25,27 @@ orthog_structured_smooths <- function(S,P,L)
                 Pnew = lapply(P, function(p) t(Z) %*% p %*% Z))
     )
 
+}
+
+orthog_structured_smooths_Z <- function(S,L)
+{
+  
+  C <- t(S) %*% L
+  qr_C <- qr(C)
+  if( any(class(qr_C) == "sparseQR") ){
+    rank_C <- qr_C@Dim[2]
+  }else{
+    rank_C <- qr_C$rank
+  }
+  Q <- qr.Q(qr_C, complete=TRUE)
+  Z <- Q[  , (rank_C + 1) : ncol(Q) ]
+  return(Z)
+  
+}
+
+orthog_P <- function(P,Z)
+{
+  return(crossprod(Z,P) %*% Z)
 }
 
 orthog_smooth <- function(pcf, zero_cons = TRUE){
@@ -248,11 +263,11 @@ orthog <- function(Y, Q)
 
 orthog_tf <- function(Y, X)
 {
-
+  
   Q = tf$linalg$qr(X, full_matrices=TRUE, name="QR")$q
   X_XtXinv_Xt <- tf$linalg$matmul(Q,tf$linalg$matrix_transpose(Q))
-  Yorth <- Y - tf$linalg$matmul(X_XtXinv_Xt, Y)
-
+  Yorth <- tf$subtract(Y, tf$linalg$matmul(X_XtXinv_Xt, Y))
+  
 }
 
 orthog_nt <- function(Y,X) Y <- X%*%solve(crossprod(X))%*%crossprod(X,Y)

@@ -2,6 +2,7 @@ import tensorflow as tf
 import numpy as np
 import math
 from tensorflow import keras
+import tensorflow.keras.regularizers as regularizers
 
 ### Helper functions matrix algebra
 def tf_crossprod(a,b):
@@ -12,7 +13,11 @@ def tf_unitvec(n,j):
     return(tf.transpose(tf.eye(n)[None,j,:]))
 def tf_operator_multiply(scalar, operator):
     return(operator.matmul(tf.linalg.diag(tf.repeat(scalar, operator.shape[0]))))
-
+def vecmatvec(a, B, c=None, sparse_mat = False):
+    if c is None:
+        c = a
+    #return(tf.matmul(tf.transpose(a),tf.linalg.matvec(B, tf.squeeze(c, [1]), a_is_sparse = sparse_mat)))
+    return(tf.keras.backend.sum(tf.keras.backend.batch_dot(a, tf.keras.backend.dot(B, c), axes=1)))
 
 ### Stuff for smoothing
 def lambda_times_P(lambdas, Plist):
@@ -97,7 +102,21 @@ def get_specific_layer(string_to_match, layers, index=True, invert=False):
     else:
         return(layers[wh])    
     
-    
+
+def layer_spline(P, units, name):
+    return(tf.keras.layers.Dense(units = units, name = name, use_bias=False, kernel_regularizer = squaredPenalty(P, 1)))
+
+class squaredPenalty(regularizers.Regularizer):
+
+    def __init__(self, P, strength):
+        self.strength = strength
+        self.P = P
+
+    def __call__(self, x):
+        return self.strength * tf.reduce_sum(vecmatvec(x, tf.cast(self.P, dtype="float32"), sparse_mat = True))
+
+    def get_config(self):
+        return {'strength': self.strength, 'P': self.P}
     
 class PenLinear(tf.keras.layers.Layer):
     def __init__(self, units, lambdas, mask, P, n, nr):

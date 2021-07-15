@@ -7,7 +7,7 @@
 mix_dist_maker(
   dist = tfd_normal,
   nr_comps = 3,
-  trafos_each_param = list(function(x) x, function(x) 1e-08 + tfe(x))
+  trafos_each_param = list(function(x) x, function(x) tf$add(1e-08, tfe(x)))
 )
 }
 \arguments{

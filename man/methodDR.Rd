@@ -2,7 +2,6 @@
 % Please edit documentation in R/methods.R
 \name{plot.deepregression}
 \alias{plot.deepregression}
-\alias{prepare_data}
 \alias{predict.deepregression}
 \alias{predict.deeptrafo}
 \alias{fitted.deepregression}
@@ -25,8 +24,6 @@
   ...
 )
 
-prepare_data(x, data, pred = TRUE)
-
 \method{predict}{deepregression}(
   object,
   newdata = NULL,
@@ -42,14 +39,16 @@ prepare_data(x, data, pred = TRUE)
 \method{fitted}{deepregression}(object, apply_fun = tfd_mean, ...)
 
 \method{fit}{deepregression}(
-  x,
+  object,
+  batch_size = NULL,
+  epochs = 10,
   early_stopping = FALSE,
   verbose = TRUE,
   view_metrics = FALSE,
   patience = 20,
   save_weights = FALSE,
-  auc_callback = FALSE,
   validation_data = NULL,
+  validation_split = 0.1,
   callbacks = list(),
   convertfun = function(x) tf$constant(x, dtype = "float32"),
   ...
@@ -101,15 +100,11 @@ is evaluated for plotting.}
 
 \item{...}{arguments passed to the \code{predict} function}
 
-\item{data}{either \code{NULL} or a new data set}
-
-\item{pred}{logical, where the data corresponds to a prediction task}
-
 \item{object}{a deepregression model}
 
 \item{newdata}{optional new data, either data.frame or list}
 
-\item{batch_size}{batch_size for generator (image use cases)}
+\item{batch_size}{}
 
 \item{apply_fun}{function applied to fitted distribution,
 per default \code{tfd_mean}}
@@ -128,8 +123,6 @@ per default \code{as.matrix}}
 \item{patience}{number of patience for early stopping}
 
 \item{save_weights}{logical, whether to save weights in each epoch.}
-
-\item{auc_callback}{logical, whether to use a callback for AUC}
 
 \item{validation_data}{optional specified validation data}
 
@@ -155,14 +148,11 @@ smooth terms}
 
 \item{mylapply}{lapply function to be used; defaults to \code{lapply}}
 
+\item{data}{either \code{NULL} or a new data set}
+
 \item{probs}{the quantile value(s)}
 
-\item{train}{function taking the keras model, inputs and outputs as an
-updates the model}
-
-\item{epochs}{integer; the number of epochs to train}
-
-\item{print_fun}{function to print metrics}
+\item{auc_callback}{logical, whether to use a callback for AUC}
 }
 \value{
 returns a function with two parameters: the actual response
@@ -175,17 +165,15 @@ containing the model fit and the \code{weighthistory}.
 \description{
 Generic functions for deepregression models
 
-Function to prepare data for deepregression use
-
 Predict based on a deepregression object
 
 Predict based on a deeptrafo object
 
 Function to extract fitted distribution
 
-Fit a deepregression model
+Fit a deepregression model (pendant to fit for keras)
 
-Fit a custom deepregression models
+Extract layer weights / coefficients from model
 
 Print function for deepregression model
 
