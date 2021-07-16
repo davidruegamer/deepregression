@@ -72,7 +72,7 @@ handle_gam_term <- function(
 {
   
   # check for df argument and remove
-  df <- extractval(object, "df")
+  df <- suppressWarnings(extractval(object, "df"))
   if(!is.null(df)){ 
     object <- remove_df(object)
   }else{

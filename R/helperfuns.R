@@ -141,7 +141,6 @@ separate_define_relation <- function(form, specials, specials_to_oz, automatic_o
   
 }
 
-
 remove_brackets <- function(x)
 {
   

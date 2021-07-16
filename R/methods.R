@@ -1,16 +1,11 @@
 #' @title Generic functions for deepregression models
 #'
 #' @param x deepregression object
-#' @param which which effect to plot, default selects all.
+#' @param name which effect to plot as character; default plots all
 #' @param which_param integer of length 1.
 #' Corresponds to the distribution parameter for
 #' which the effects should be plotted.
 #' @param plot logical, if FALSE, only the data for plotting is returned
-#' @param use_posterior logical; if \code{TRUE} it is assumed that
-#' the strucuted_nonlinear layer has stored a list of length two
-#' as weights, where the first entry is a vector of mean and sd
-#' for each network weight. The sd is transformed using the \code{exp} function.
-#' The plot then shows the mean curve +- 2 times sd.
 #' @param grid_length the length of an equidistant grid at which a two-dimensional function
 #' is evaluated for plotting.
 #' @param ... further arguments, passed to fit, plot or predict function
@@ -25,134 +20,68 @@ plot.deepregression <- function(
   # which of the nonlinear structured effects
   which_param = 1, # for which parameter
   plot = TRUE,
-  use_posterior = FALSE,
   grid_length = 40,
   ... # passed to plot function
 )
 {
-  this_ind <- x$init_params$ind_structterms[[which_param]]
-  if(all(this_ind$type!="smooth")) return("No smooth effects. Nothing to plot.")
-  if(is.null(which)) which <- 1:length(which(this_ind$type=="smooth"))
-  plus_number_lin_eff <- sum(this_ind$type=="lin")
 
-  plotData <- vector("list", length(which))
-  org_feature_names <-
-    names(x$init_params$l_names_effects[[which_param]][["smoothterms"]])
-  phi <- tryCatch(x$model$get_layer(paste0("structured_nonlinear_",
-                                  which_param))$get_weights(), 
-                  error = function(e){
-                    layer_nr <- grep("pen_linear", 
-                                     sapply(1:length(x$model$trainable_weights), 
-                                            function(k) x$model$trainable_weights[[k]]$name))
-                    # FixMe: multiple penalized layers
-                    list(as.matrix(x$model$trainable_weights[[layer_nr[which_param]]]))
-                    })
+  pfc <- x$init_params$parsed_formulas_contents[[which_param]]
+  plotable <- sapply(pfc, function(x) !is.null(x$plot_fun))
+  names_all <- get_names_pfc(pfc)
+  names <- names_all[plotable]
   
-  if(length(phi)>1){
-    if(use_posterior){
-      phi <- matrix(phi[[1]], ncol=2, byrow=F)
-    }else{
-      phi <- as.matrix(phi[[2]], ncol=1)
-    }
-  }else{
-    phi <- phi[[1]]
+  if(!is.null(which)){
+    which <- intersect(names, which)
+    if(length(which)==0)
+      return("No smooth effects. Nothing to plot.")
   }
-
-  for(w in which){
-
-    nam <- org_feature_names[w]
-    this_ind_this_w <- do.call("Map",
-                               c(":", as.list(this_ind[w+plus_number_lin_eff,
-                                                       c("start","end")])))[[1]]
-    BX <-
-      x$init_params$parsed_formulas_contents[[
-        which_param]]$smoothterms[[nam]][[1]]$X
-    if(use_posterior){
-
-      # get the correct index as each coefficient has now mean and sd
-      phi_mean <- phi[this_ind_this_w,1]
-      phi_sd <- log(exp(log(expm1(1)) + phi[this_ind_this_w,2])+1)
-      plotData[[w]] <-
-        list(org_feature_names = nam,
-             value = unlist(x$init_params$data[strsplit(nam,",")[[1]]]),
-             design_mat = BX,
-             coef = phi[this_ind_this_w,],
-             mean_partial_effect = BX%*%phi_mean,
-             sd_partial_effect = sqrt(diag(BX%*%diag(phi_sd^2)%*%t(BX))))
-    }else{
-      plotData[[w]] <-
-        list(org_feature_name = nam,
-             value = sapply(strsplit(nam,",")[[1]], function(xx)
-               x$init_params$data[[xx]]),
-             design_mat = BX,
-             coef = phi[this_ind_this_w,],
-             partial_effect = BX%*%phi[this_ind_this_w,])
-    }
-    if(plot){
-      nrcols <- pmax(NCOL(plotData[[w]]$value), length(unlist(strsplit(nam,","))))
-      if(nrcols==1)
-      {
-        if(use_posterior){
-          plot(plotData[[w]]$mean_partial_effect[order(plotData[[w]]$value)] ~
-                 sort(plotData[[w]]$value),
-               main = paste0("s(", nam, ")"),
-               xlab = nam,
-               ylab = "partial effect",
-               ylim = c(min(plotData[[w]]$mean_partial_effect -
-                              2*plotData[[w]]$sd_partial_effect),
-                        max(plotData[[w]]$mean_partial_effect +
-                              2*plotData[[w]]$sd_partial_effect)),
-               ...)
-          with(plotData[[w]], {
-            points((mean_partial_effect + 2 * sd_partial_effect)[order(plotData[[w]]$value)] ~
-                     sort(plotData[[w]]$value), type="l", lty=2)
-            points((mean_partial_effect - 2 * sd_partial_effect)[order(plotData[[w]]$value)] ~
-                     sort(plotData[[w]]$value), type="l", lty=2)
-          })
-        }else{
-          plot(partial_effect[order(value),1] ~ sort(value[,1]),
-               data = plotData[[w]][c("value", "partial_effect")],
-               main = paste0("s(", nam, ")"),
-               xlab = nam,
-               ylab = "partial effect",
-               ...)
-        }
-      }else if(nrcols==2){
-        sTerm <- x$init_params$parsed_formulas_contents[[which_param]]$smoothterms[[w]][[1]]
-        this_x <- do.call(seq, c(as.list(range(plotData[[w]]$value[,1])),
-                                 list(l=grid_length)))
-        this_y <- do.call(seq, c(as.list(range(plotData[[w]]$value[,2])),
-                                 list(l=grid_length)))
-        df <- as.data.frame(expand.grid(this_x,
-                                        this_y))
-        colnames(df) <- sTerm$term
-        pmat <- PredictMat(sTerm, data = df)
-        if(attr(x$init_params$parsed_formulas_contents[[which_param]],"zero_cons"))
-          pmat <- orthog_structured_smooths(pmat,P=NULL,L=matrix(rep(1,nrow(pmat)),ncol=1))
-        pred <- pmat%*%phi[this_ind_this_w,]
-        #this_z <- plotData[[w]]$partial_effect
-        suppressWarnings(
-          filled.contour(
-            this_x,
-            this_y,
-            matrix(pred, ncol=length(this_y)),
-            ...,
-            xlab = colnames(df)[1],
-            ylab = colnames(df)[2],
-            # zlab = "partial effect",
-            main = sTerm$label
-          )
+  
+  plotData <- list()
+    
+  for(name in which){
+    
+    pp <- pfc[[which(names_all==name)]]
+    plotData[[name]] <- pp$plot_fun(pp, 
+                                    weights = get_weight_by_name(x, name = name , 
+                                                                 param_nr = which_param), 
+                                    grid_length = grid_length)
+    
+    dims <- NCOL(plotData[[name]]$value)
+    
+    if(dims==1){
+      
+      plot(partial_effect[order(value),1] ~ sort(value),
+           data = plotData[[name]][c("value", "partial_effect")],
+           main = paste0("s(", name, ")"),
+           xlab = name,
+           ylab = "partial effect",
+           ...)
+      
+    }else if(dims==2){
+      
+      suppressWarnings(
+        filled.contour(
+          plotData[[name]]$x,
+          plotData[[name]]$y,
+          matrix(plotData[[name]]$partial_effect, 
+                 ncol=length(plotData[[name]]$y)),
+          ...,
+          xlab = colnames(plotData[[name]]$df)[1],
+          ylab = colnames(plotData[[name]]$df)[2],
+          # zlab = "partial effect",
+          main = name
         )
-        # warning("Plotting of effects with ", nrcols, "
-        #         covariate inputs not supported yet.")
-      }else{
-        warning("Plotting of effects with ", nrcols,
-                " covariate inputs not supported.")
-      }
+      )
+      
+    }else{
+      warning("Plotting of effects with ", dims,
+              " covariate inputs not supported.")
     }
+    
   }
-
+  
   invisible(plotData)
+  
 }
 
 
@@ -320,10 +249,8 @@ fit.deepregression <- function(
 #' Extract layer weights / coefficients from model
 #'
 #' @param object a deepregression model
-#' @param variational logical, if TRUE, the function takes into account
-#' that coefficients have both a mean and a variance
-#' @param params integer, indicating for which distribution parameter
-#' coefficients should be returned (default is all parameters)
+#' @param which_param integer, indicating for which distribution parameter
+#' coefficients should be returned (default is first parameter)
 #' @param type either NULL (all types of coefficients are returned),
 #' "linear" for linear coefficients or "smooth" for coefficients of 
 #' smooth terms
@@ -334,94 +261,28 @@ fit.deepregression <- function(
 #'
 coef.deepregression <- function(
   object,
-  variational = FALSE,
-  params = NULL,
+  which_param = 1,
   type = NULL,
   ...
 )
 {
-  nrparams <- length(object$init_params$parsed_formulas_contents)
-  if(is.null(params)) params <- 1:nrparams
-  layer_names <- sapply(object$model$layers, "[[", "name")
-  lret <- vector("list", length(params))
-  names(lret) <- object$init_params$param_names[params]
-  if(is.null(type))
-    type <- c("linear", "smooth")
-  for(j in 1:length(params)){
-    i = params[j]
-    sl <- paste0("structured_linear_",i)
-    slas <- paste0("structured_lasso_",i)
-    snl <- paste0("structured_nonlinear_",i)
-    tl <- paste0("tib_lasso_", i)
-    lret[[j]] <- list(structured_linear = NULL,
-                      structured_lasso = NULL,
-                      structured_nonlinear = NULL
-                      )
-
-    lret[[j]]$structured_linear <-
-      if(sl %in% layer_names)
-        object$model$get_layer(sl)$get_weights()[[1]] else
-          NULL
-    if(slas %in% layer_names | tl %in% layer_names){
-        if(slas %in% layer_names)
-          lret[[j]]$structured_lasso <- object$model$get_layer(slas)$get_weights()[[1]] else
-            lret[[j]]$structured_lasso <- 
-              rbind(object$model$get_layer(tl)$get_weights()[[2]],
-                    object$model$get_layer(tl)$get_weights()[[1]] *
-                      matrix(rep(object$model$get_layer(tl)$get_weights()[[3]], 
-                                 each=ncol(object$model$get_layer(tl)$get_weights()[[1]])), 
-                                 ncol=ncol(object$model$get_layer(tl)$get_weights()[[1]]), byrow = TRUE))
-    }else{
-      lret[[j]]$structured_lasso <- NULL
-    }
-    if(snl %in% layer_names){
-      cf <- object$model$get_layer(snl)$get_weights()
-      if(length(cf)==2 & variational){
-        lret[[j]]$structured_nonlinear <-  cf[[1]]
-      }else{
-        lret[[j]]$structured_nonlinear <- cf[[length(cf)]]
-      }
-    }else{
-      lret[[j]]$structured_nonlinear <- NULL
-    }
-
-    sel <- which(c("linear", "smooth") %in% type)
-    if(is.character(object$init_params$ind_structterms[[i]]$type)){
-      object$init_params$ind_structterms[[i]]$type <- factor(
-        object$init_params$ind_structterms[[i]]$type,
-        levels = c("lin", "smooth")
-      )
-    }
-    struct_terms_fitting_type <- 
-      sapply(as.numeric(object$init_params$ind_structterms[[i]]$type),
-             function(x) x%in%sel)
-    length_names <- 
-      (
-        object$init_params$ind_structterms[[i]]$end - 
-          object$init_params$ind_structterms[[i]]$start + 1
-      )
-    sel_ind <- rep(struct_terms_fitting_type, length_names)
-    if(any(sapply(lret[[j]], NCOL)>1)){
-      lret[[j]] <- lapply(lret[[j]], function(x) x[sel_ind,])
-      lret[[j]]$linterms <- do.call("rbind", lret[[j]][
-        c("structured_linear", "structured_lasso")])
-      lret[[j]]$smoothterms <- lret[[j]]["structured_nonlinear"]
-      lret[[j]] <- lret[[j]][c("linterms","smoothterms")[sel]]
-      lret[[j]] <- lret[[j]][!sapply(lret[[j]],function(x) is.null(x) | is.null(x[[1]]))]
-      lret[[j]] <- do.call("rbind", lret[[j]])
-      rownames(lret[[j]]) <- rep(unlist(object$init_params$l_names_effects[[i]][
-        c("linterms","smoothterms")]),
-        length_names[struct_terms_fitting_type])
-    }else if(length(lret[[j]])>0){
-      lret[[j]] <- unlist(lret[[j]])
-      lret[[j]] <- lret[[j]][sel_ind]
-      names(lret[[j]]) <- rep(unlist(object$init_params$l_names_effects[[i]][
-        c("linterms","smoothterms")[sel]]),
-        length_names[struct_terms_fitting_type])
-    }
-    
-  }
-  return(lret)
+  
+  pfc <- object$init_params$parsed_formulas_contents[[which_param]]
+  linear <- sapply(pfc, function(x) is.null(x$partial_effect) & !is.null(x$coef))
+  smooth <- sapply(pfc, function(x) !is.null(x$partial_effect) & !is.null(x$coef))
+  
+  if(is.null(type)) type <- c("linear", "smooth") else 
+    stopifnot(type %in% c("linear", "smooth"))
+  to_return <- linear * ("linear" %in% type) + smooth * ("smooth" %in% type)
+  
+  names <- get_names_pfc(pfc)[as.logical(to_return)]
+  check_names <- names
+  check_names[check_names=="(Intercept)"] <- "1"
+  
+  coefs <- lapply(check_names, function(n) get_weight_by_name(object, n, which_param))
+  names(coefs) <- names
+  
+  return(coefs)
 
 }
 
@@ -760,8 +621,8 @@ get_partial_effect <- function(object, name, return_matrix = FALSE,
 {
   
   weights <- get_weight_by_name(object, name = name, param_nr = which_param)
-  names_pcfs <- sapply(object$init_params$parsed_formulas_contents[[which_param]], "[[", "term")
-  w <- which(name==names_pcf)
+  names_pfcs <- get_names_pfc(object$init_params$parsed_formulas_contents[[which_param]])
+  w <- which(name==names_pfc)
   if(length(w)==0)
     stop("Cannot find specified name in additive predictor #", which_param,".")
   pe_fun <- object$init_params$parsed_formulas_contents[[which_param]][[w]]$partial_effect

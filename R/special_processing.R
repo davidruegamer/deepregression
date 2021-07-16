@@ -69,7 +69,7 @@ processor <- function(
     spec <- get_special(list_terms[[i]]$term, specials = specials)
     args$controls <- NULL 
     if(is.null(spec)){
-      args$param_nr <- paste0(args$param_nr, ".", lin_counter)
+      #args$param_nr <- paste0(args$param_nr, ".", lin_counter)
       result[[i]] <- c(list_terms[[i]], do.call(lin_processor,
                                                 args))
       lin_counter <- lin_counter+1
@@ -112,7 +112,7 @@ lin_processor <- function(term, data, output_dim, param_nr){
         tf$keras$layers$Dense(
           units = output_dim,
           use_bias = FALSE,
-          name = paste0("linear_terms_", param_nr),
+          name = makelayername(term, param_nr),
           ...)(x)),
     coef = function(weights) weights
   )
@@ -159,7 +159,7 @@ gam_processor <- function(term, data, output_dim, param_nr, controls){
                    P = as.matrix(bdiag(lapply(1:length(sp_and_S[[1]]), function(i) 
                      sp_and_S[[1]][[i]] * sp_and_S[[2]][[i]]))),
                    units = output_dim)(x))
-  }else{
+  }else{ # TODO: move this to a dedicated processor
     layer <- function(x, ...)
       return(tfp$layer$DenseVariational(
         make_posterior_fn = controls$make_posterior_fn,
@@ -180,7 +180,9 @@ gam_processor <- function(term, data, output_dim, param_nr, controls){
       if(is.null(newdata))
         return(evaluated_gam_term[[1]]$X %*% Z %*% weights)
       return(predict_gam_handler(evaluated_gam_term, newdata = newdata) %*% Z %*% weights)
-    } 
+    },
+    plot_fun = function(self, weights, grid_length) gam_plot_data(self, weights, grid_length),
+    get_org_values = function() data[extractvar(term)]
   )
 }
 
@@ -328,7 +330,7 @@ extractval <- function(term, name)
   inputs <- as.list(as.list(term)[[2]])[-1]
   if(name %in% names(inputs)) return(inputs[[name]])
   warning("Argument ", name, " not found. Setting it to some default.")
-  if(name=="df") return(6) else if(name=="la") return(0.1) else return(1)
+  if(name=="df") return(NULL) else if(name=="la") return(0.1) else return(1)
 
 }
 
@@ -370,3 +372,5 @@ predict_gam_handler <- function(object, newdata)
   return(lapply(object, function(obj) PredictMat(obj, newdata)))  
   
 }
+
+get_names_pfc <- function(pfc) sapply(pfc, "[[", "term")

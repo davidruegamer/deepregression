@@ -246,6 +246,52 @@ tf_block_diag <- function(listMats)
 }
 
 
+
+gam_plot_data <- function(pp, weights, grid_length = 40)
+{
+  
+  org_values <- pp$get_org_values()
+  
+  if(length(org_values)==1){
+    
+    BX <- pp$data_trafo()
+    
+    plotData <-
+      list(org_feature_name = pp$term,
+           value = org_values[[1]],
+           design_mat = BX,
+           coef = weights,
+           partial_effect = BX%*%weights)
+    
+  }else{
+    
+    BX <- pp$data_trafo()
+    
+    plotData <-
+      list(org_feature_name = pp$term,
+           value = do.call("cbind", org_values),
+           design_mat = BX,
+           coef = weights
+           )
+    
+    this_x <- do.call(seq, c(as.list(range(plotData$value[,1])),
+                             list(l=grid_length)))
+    this_y <- do.call(seq, c(as.list(range(plotData$value[,2])),
+                             list(l=grid_length)))
+    df <- as.data.frame(expand.grid(this_x, this_y))
+    colnames(df) <- extractvar(pp$term)
+    pmat <- pp$predict_trafo(newdata = df)
+    plotData$df <- df
+    plotData$x <- this_x
+    plotData$y <- this_y
+    plotData$partial_effect <- pmat%*%weights
+    
+  }
+  
+  return(plotData)
+  
+}
+
 # CustomLayer <- R6::R6Class("penalizedLikelihoodLoss",
 #                            
 #                            inherit = KerasLayer,
