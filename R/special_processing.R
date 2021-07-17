@@ -26,9 +26,7 @@ processor <- function(
          lasso = l1_processor,
          ridge = l2_processor,
          offset = offset_processor,
-         vi = vi_processor,
-         fm = fm_processor,
-         vfm = vfm_processor
+         vi = vi_processor
     )
   
   dots <- list(...)
@@ -74,7 +72,7 @@ processor <- function(
                                                 args))
       lin_counter <- lin_counter+1
     }else{
-      if(spec %in% c("s", "te", "ti")) args$controls <- controls
+      if(spec %in% c("s", "te", "ti", "vc")) args$controls <- controls
       result[[i]] <- c(list_terms[[i]], do.call(procs[[spec]], args))
     }
     
@@ -197,7 +195,7 @@ fac_processor <- function(term, data, output_dim, param_nr){
                  depth = nlevels(data[[extractvar(term)]])) %>% 
       tf$keras$layers$Dense(
         units = output_dim,
-        kernel_regularizer = tf$keras$regularizers$l2(l = extractval(term)),
+        kernel_regularizer = tf$keras$regularizers$l2(l = extractval(term, "la")),
         name = makelayername(term, 
                              param_nr),
         ...
@@ -206,9 +204,47 @@ fac_processor <- function(term, data, output_dim, param_nr){
   )
 }
   
-vc_processor <- function(){
+vc_processor <- function(term, data, output_dim, param_nr, controls){
   # vc (old: vc, vcc)
+  vars <- extractvar(term)
+  byt <- form2text(extractval(term, "by"))
+  # extract gam part
+  gampart <- get_gam_part(term)
+  if(length(setdiff(vars, c(extractvar(gampart), extractvar(byt))))>0)
+    stop("vc terms currently only suppoert one gam term and one by term.")
   
+  nlev <- sapply(data[extractvar(byt)], nlevels)
+  
+  output_dim <- as.integer(output_dim)
+  # extract mgcv smooth object
+  evaluated_gam_term <- handle_gam_term(object = gampart, 
+                                        data = data, 
+                                        controls = controls)
+  
+  ncolNum <- ncol(evaluated_gam_term[[1]]$X)
+  
+  P <- evaluated_gam_term[[1]]$S[[1]]
+  
+  if(length(nlev)==1){
+    layer <- vc_block(ncolNum, nlev, penalty = P, 
+                      name = makelayername(term, param_nr), units = units)
+  }else if(length(nlev)==2){
+    layer <- vc_block(ncolNum, nlev[1], nlev[2], penalty = P, 
+                      name = makelayername(term, param_nr), units = units)
+  }else{
+    stop("vc terms with more than 2 factors currently not supported.")
+  }
+
+  list(
+    data_trafo = function() do.call("cbind", c(evaluated_gam_term[[1]]$X, 
+                                               as.integer(data[byt]))),
+    predict_trafo = function(newdata) do.call("cbind", c(
+      predict_gam_handler(evaluated_gam_term, newdata = newdata),
+      as.integer(data[byt]))),
+    input_dim = ncolNum + length(nlev),
+    layer = layer,
+    coef = function(weights) weights
+  )
 }
 
 l1_processor <- function(term, data, output_dim, param_nr){
@@ -285,16 +321,6 @@ vi_processor <- function(term, data, output_dim, param_nr){
   )
 }
 
-fm_processor <- function(){
-  # fm
-  
-}
-
-vfm_processor <- function(){
-  # vfm
-  
-}
-
 dnn_placeholder_processor <- function(dnn){
   function(term, data, output_dim, param_nr){
     list(
@@ -346,6 +372,13 @@ evalarg <- function(term)
 {
   
   
+  
+}
+
+get_gam_part <- function(term, specials = c("s", "te", "ti"))
+{
+  
+  gsub("vc\\(((s|te|ti)\\(.*\\))\\,\\sby=.*\\)","\\1", term)
   
 }
 

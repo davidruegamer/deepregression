@@ -35,8 +35,9 @@ subnetwork_init <- function(pp, deep_top = NULL,
     outputs_onlyfor_oz <- outputs_used_for_oz[!sapply(pp[outputs_used_for_oz], "[[", "left_from_oz")]
     outputs_wo_oz <- setdiff(1:length(pp), c(outputs_w_oz, outputs_onlyfor_oz))
     
-    outputs <- layer_add_identity(lapply((1:length(pp))[outputs_wo_oz], 
-                                         function(i) pp[[i]]$layer(inputs[[i]])))
+    outputs <- list()
+    if(length(outputs_wo_oz)>0) outputs <- layer_add_identity(lapply((1:length(pp))[outputs_wo_oz], 
+                                                                     function(i) pp[[i]]$layer(inputs[[i]])))
     ox_outputs <- list()
     k <- 1
     

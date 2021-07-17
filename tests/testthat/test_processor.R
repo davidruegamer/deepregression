@@ -14,6 +14,22 @@ test_that("lin_processor", {
   
 })
 
+test_that("vc_processor", {
+  
+  n <- 40
+  data = data.frame(a=rnorm(n), b=rnorm(n), c=rnorm(n), d=rnorm(n))
+  term="vc(te(a,b), by=c(c,d))"
+  expect_equal(vc_processor(term, data, 1, 1)$input_dim, 3)
+  term="vc(te(a,b), by=c)"
+  expect_equal(vc_processor(term, data, 1, 1)$input_dim, 3)
+  term="vc(s(a), by=c(c,d))"
+  expect_equal(vc_processor(term, data, 1, 1)$input_dim, 3)
+  term="vc(s(a), by=c)" 
+  expect_equal(vc_processor(term, data, 1, 1)$input_dim, 2)
+  
+})
+
+
 test_that("processor", {
   
   form = ~ 1 + d(x) + s(x) + lasso(z) + ridge(z) + te(y) %OZ% (y + s(x)) + d(z) %OZ% s(x) + u

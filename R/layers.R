@@ -16,17 +16,19 @@ tib_layer = function(units, use_bias = FALSE, la, ...) {
                         la = la, ...)
 }
 
-tp_layer = function(a, b, pen=NULL, name=NULL) {
-  x <- tf_row_tensor(a, b) %>% 
-    layer_dense(units = 1, activation = "linear", 
+# tp and ttp have different positioning internally (b,a instead of a,b)
+# as this results in a sparser design and penalty matrix
+tp_layer = function(a, b, pen=NULL, name=NULL, units = 1) {
+  x <- tf_row_tensor(b, a) %>% 
+    layer_dense(units = units, activation = "linear", 
                 name = name, use_bias = FALSE, 
                 kernel_regularizer = pen)
   return(x)
 }
 
-ttp_layer = function(a, b, c, pen=NULL, name = NULL) {
-  x <- tf_row_tensor(tf_row_tensor(a, b), c) %>% 
-    layer_dense(units = 1, activation = "linear", 
+ttp_layer = function(a, b, c, pen=NULL, name=NULL, units = 1) {
+  x <- tf_row_tensor(tf_row_tensor(b, c), a) %>% 
+    layer_dense(units = units, activation = "linear", 
                 name = name, use_bias = FALSE, 
                 kernel_regularizer = pen)
   return(x)
@@ -44,28 +46,47 @@ tf_stride_cols <- function(A, start, end=NULL)
 
 }
     
-vc_block <- function(ncolNum, levFac, penalty = NULL, name = NULL){
-  ret_fun <- function(x){ 
+pen_vc <- function(P, strength, nlev)
+{
+  python_path <- system.file("python", package = "deepregression")
+  splines <- reticulate::import_from_path("psplines", path = python_path)
+  return(splines$squaredPenaltyVC(P = as.matrix(P), strength=strength, nlev))
+  
+}
+
+vc_block <- function(ncolNum, levFac, penalty = NULL, name = NULL, units = 1){
+  
+  if(!is.null(penalty))
+    penalty = pen_vc(penalty, strength=1, nlev=levFac)
+  
+  ret_fun <- function(x){
     
     a = tf_stride_cols(x, 1, ncolNum)
     b = tf$one_hot(tf$cast(
       (tf_stride_cols(x, ncolNum+1)[,1]), 
       dtype="int32"), 
       depth=levFac)
-    return(tp_layer(a, b, pen=penalty, name=name))
+    return(tp_layer(a, b, pen=penalty, name=name, units=units))
     
   }
   return(ret_fun)
 }
 
-vvc_block <- function(ncolNum, levFac1, levFac2, penalty = NULL, name = NULL){
+vvc_block <- function(ncolNum, levFac1, levFac2, penalty = NULL, name = NULL, units = 1){
+  
+  if(!is.null(penalty))
+    penalty = pen_vc(penalty, strength=1, nlev=levFac1*levFac2)
+  
   ret_fun <- function(x) ttp_layer(x[,as.integer(1:ncolNum)],
                                   tf$one_hot(tf$cast(x[,as.integer((ncolNum+1))], dtype="int32"), 
                                              depth=levFac1),
                                   tf$one_hot(tf$cast(x[,as.integer((ncolNum+2))], dtype="int32"), 
-                                             depth=levFac2), pen=penalty, name=name)
+                                             depth=levFac2), pen=penalty, name=name, units=units)
+  
   return(ret_fun)
 }
+
+pen_vc_gen <- function()
 
 layer_factor <- function(nlev, units = 1, activation = "linear", use_bias = FALSE, name = NULL,
                          kernel_regularizer = NULL)

@@ -34,6 +34,8 @@ plot.deepregression <- function(
     which <- intersect(names, which)
     if(length(which)==0)
       return("No smooth effects. Nothing to plot.")
+  }else{
+    which <- names
   }
   
   plotData <- list()
@@ -50,16 +52,16 @@ plot.deepregression <- function(
     
     if(dims==1){
       
-      plot(partial_effect[order(value),1] ~ sort(value),
-           data = plotData[[name]][c("value", "partial_effect")],
-           main = paste0("s(", name, ")"),
-           xlab = name,
-           ylab = "partial effect",
-           ...)
+      if(plot) suppressWarnings(plot(partial_effect[order(value),1] ~ sort(value),
+                    data = plotData[[name]][c("value", "partial_effect")],
+                    main = name,
+                    xlab = extractvar(name),
+                    ylab = "partial effect",
+                    ...))
       
     }else if(dims==2){
       
-      suppressWarnings(
+      if(plot) suppressWarnings(
         filled.contour(
           plotData[[name]]$x,
           plotData[[name]]$y,
@@ -262,8 +264,7 @@ fit.deepregression <- function(
 coef.deepregression <- function(
   object,
   which_param = 1,
-  type = NULL,
-  ...
+  type = NULL
 )
 {
   
@@ -621,7 +622,7 @@ get_partial_effect <- function(object, name, return_matrix = FALSE,
 {
   
   weights <- get_weight_by_name(object, name = name, param_nr = which_param)
-  names_pfcs <- get_names_pfc(object$init_params$parsed_formulas_contents[[which_param]])
+  names_pfc <- get_names_pfc(object$init_params$parsed_formulas_contents[[which_param]])
   w <- which(name==names_pfc)
   if(length(w)==0)
     stop("Cannot find specified name in additive predictor #", which_param,".")

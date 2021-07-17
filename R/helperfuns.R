@@ -61,6 +61,7 @@ separate_define_relation <- function(form, specials, specials_to_oz, automatic_o
             any(sapply(these_vars, function(tv) tv%in%variables_per_trmstring[[j]])) & 
             i != j
         })]
+        # TODO: check if this is actually necessary
         if(has_intercept) these_terms <- c("1", these_terms)
         if(length(these_terms)>0) oz_to_add[[i]] <- 
           paste0(" %OZ% (", paste(these_terms, collapse = "+"), ")")
@@ -94,8 +95,16 @@ separate_define_relation <- function(form, specials, specials_to_oz, automatic_o
     list(term = terms_left[[i]],
          nr = i,
          left_from_oz = TRUE,
-         right_from_oz = c()
+         right_from_oz = NULL
     ))
+  
+  if(has_intercept & length(intersect(c("(Intercept)","1"), sapply(terms, "[[", "term")))==0)
+    terms[[length(terms)+1]] <- list(
+      term = "1",
+      nr = length(terms)+1,
+      left_from_oz = TRUE,
+      right_from_oz = NULL
+    )
       
   add_terms <- list()
   j <- 1

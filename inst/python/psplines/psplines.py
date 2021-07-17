@@ -106,6 +106,9 @@ def get_specific_layer(string_to_match, layers, index=True, invert=False):
 def layer_spline(P, units, name):
     return(tf.keras.layers.Dense(units = units, name = name, use_bias=False, kernel_regularizer = squaredPenalty(P, 1)))
 
+def layer_splineVC(P, units, name):
+    return(tf.keras.layers.Dense(units = units, name = name, use_bias=False, kernel_regularizer = squaredPenaltyVC(P, 1)))
+
 class squaredPenalty(regularizers.Regularizer):
 
     def __init__(self, P, strength):
@@ -114,6 +117,23 @@ class squaredPenalty(regularizers.Regularizer):
 
     def __call__(self, x):
         return self.strength * tf.reduce_sum(vecmatvec(x, tf.cast(self.P, dtype="float32"), sparse_mat = True))
+
+    def get_config(self):
+        return {'strength': self.strength, 'P': self.P}
+
+class squaredPenaltyVC(regularizers.Regularizer):
+
+    def __init__(self, P, strength, nlev):
+        self.strength = strength
+        self.P = P
+        self.nlev = nlev
+
+    def __call__(self, x):
+        x_splitted = tf.split(x, nlev)
+        pen = 0
+        for x_k in x_splitted:
+            pen += tf.reduce_sum(vecmatvec(x_k, tf.cast(self.P, dtype="float32"), sparse_mat = True))
+        return self.strength * pen
 
     def get_config(self):
         return {'strength': self.strength, 'P': self.P}

@@ -18,13 +18,6 @@
 #' @param family a character specifying the distribution. For information on
 #' possible distribution and parameters, see \code{\link{make_tfd_dist}}. Can also 
 #' be a custom distribution
-#' @param train_together a list of formulas of the same length as \code{list_of_formulas}
-#' specifying the deep predictors that should be trained together and then the results are;
-#' fed into different distribution parameters; use the same name for the deep predictor to
-#' indicate for which distribution parameter they should be used. For example, if the second
-#' and fourth list entry are \code{~ lstm_mod(text)} then the jointly learned \code{lstm_mod}
-#' network is added to the linear predictor of the second and fourth distribution parameter.
-#' Those network names should then be excluded from the \code{list_of_formulas}
 #' @param data data.frame or named list with input features
 #' @param tf_seed a seed for tensorflow (only works with R version >= 2.2.0)
 #' @param return_prepoc logical; if TRUE only the pre-processed data and layers are returned (default FALSE).
@@ -76,13 +69,20 @@
 #' mod %>% get_partial_effect(name = "s(xa)")
 #' mod %>% coef()
 #' mod %>% plot()
+#' 
+#' mod <- deepregression(
+#'   list_of_formulas = list(loc = ~ 1 + s(xa) + x1, scale = ~ 1, 
+#'                           dummy = ~ -1 + deep_model(x1,x2,x3) %OZ% 1),
+#'   data = data, y = y,
+#'   list_of_deep_models = list(deep_model = deep_model),
+#'   mapping = list(1,2,1:2)
+#' )
 #'
 deepregression <- function(
   y,
   list_of_formulas,
   list_of_deep_models,
   family = "normal",
-  train_together = list(),
   data,
   tf_seed = as.integer(1991-5-4),
   return_prepoc = FALSE,
@@ -120,13 +120,9 @@ deepregression <- function(
   # for convenience transform NULL to list(NULL) for list_of_deep_models
   if(missing(list_of_deep_models) | is.null(list_of_deep_models)){
     list_of_deep_models <- list(NULL)
-    if(length(train_together)==0) warning("No deep model specified")
+
   }else if(!is.list(list_of_deep_models)) stop("list_of_deep_models must be a list.")
 
-  if(length(train_together)>0 & (!is.list(train_together) |
-                                 length(train_together) != length(list_of_formulas)))
-    stop("If specified, train_together must be of same length as list_of_formulas.")
-  
   # get names of networks
   netnames <- names(list_of_deep_models)
 
@@ -165,16 +161,6 @@ deepregression <- function(
   if(any(sapply(list_of_formulas, function(x)
     attr( terms(x, data = data[!sapply(data, is.null)]) , "response" ) != 0 ))){
     stop("Only one-sided formulas are allowed in list_of_formulas.")
-  }
-
-  if(length(train_together)>0){
-
-    warning("train_together not well tested in combination with orthogonalization.")
-    nulls <- sapply(train_together,is.null)
-    train_together[!nulls] <-
-      lapply(train_together[!nulls], remove_intercept)
-    list_of_formulas <- c(list_of_formulas, unique(train_together[!nulls]))
-
   }
   
   cat("Preparing additive formula(e)...")
@@ -251,6 +237,13 @@ deepregression <- function(
 #'
 #' @param list_pred_param list of input-output(-lists) generated from
 #' \code{subnetwork_init}
+#' @param mapping a list of integers. The i-th list item defines which element
+#' elements of \code{list_pred_param} are used for the i-th parameter.
+#' For example, \code{map = list(1,2,1:2)} means that \code{list_pred_param[[1]]}
+#' is used for the first distribution parameter, \code{list_pred_param[[2]]} for
+#' the second distribution parameter and  \code{list_pred_param[[3]]} for both
+#' distribution parameters (and then added once to \code{list_pred_param[[1]]} and
+#' once to \code{list_pred_param[[2]]})
 #' @param family see \code{?deepregression}
 #' @return a list with input tensors and output tensors that can be passed
 #' to, e.g., \code{keras_model}
@@ -258,12 +251,28 @@ deepregression <- function(
 #' @export
 from_preds_to_dist <- function(
   list_pred_param,
-  family
+  family,
+  mapping = NULL
 )
 {
   
-  # check #parameters
-  nr_params <- length(list_pred_param)
+  if(!is.null(mapping)){
+    
+    lpp <- list_pred_param
+    list_pred_param <- list()
+    nr_params <- max(unlist(mapping)) 
+    
+    for(i in 1:nr_params){
+      list_pred_param[[i]] <- layer_add_identity(lpp[which(sapply(mapping, function(mp) i %in% mp))])
+    }
+    
+    if(!is.null(names(lpp))) names(list_pred_param) <- names(lpp)[1:nr_params]
+    
+  }else{
+  
+    nr_params <- length(list_pred_param)
+    
+  }
   
   # check family
   if(is.character(family)){
@@ -316,6 +325,7 @@ from_preds_to_dist <- function(
 #' log-likelihood. Per default independence is assumed by applying \code{tfd_independent}.
 #' @param optimizer optimizer used. Per default Adam
 #' @param monitor_metrics Further metrics to monitor
+#' @param arguments passed to other functions
 #' @return a list with input tensors and output tensors that can be passed
 #' to, e.g., \code{keras_model}
 #'
@@ -326,13 +336,14 @@ keras_dr <- function(
   weights = NULL,
   ind_fun = function(x) tfd_independent(x),
   optimizer = tf$keras$optimizers$Adam(),
-  monitor_metrics = list()
+  monitor_metrics = list(),
+  ...
 )
 {
 
   inputs <- lapply(list_pred_param, function(x) x[1:(length(x)-1)])
   outputs <- lapply(list_pred_param, function(x) x[[length(x)]])
-  out <- from_preds_to_dist(outputs, family)
+  out <- from_preds_to_dist(outputs, family, list(...)$mapping)
 
   ############################################################
   ################# Define and Compile Model #################
