@@ -324,6 +324,7 @@ from_preds_to_dist <- function(
 #' @param ind_fun function applied to the model output before calculating the
 #' log-likelihood. Per default independence is assumed by applying \code{tfd_independent}.
 #' @param optimizer optimizer used. Per default Adam
+#' @param model_instance which class of model to use (default \code{keras_model})
 #' @param monitor_metrics Further metrics to monitor
 #' @param arguments passed to other functions
 #' @return a list with input tensors and output tensors that can be passed
@@ -336,6 +337,7 @@ keras_dr <- function(
   weights = NULL,
   ind_fun = function(x) tfd_independent(x),
   optimizer = tf$keras$optimizers$Adam(),
+  model_fun = keras_model,
   monitor_metrics = list(),
   ...
 )
@@ -351,8 +353,8 @@ keras_dr <- function(
   # the final model is defined by its inputs
   # and outputs
 
-  model <- keras_model(inputs = unlist(inputs, recursive = TRUE),
-                       outputs = out)
+  model <- model_fun(inputs = unlist(inputs, recursive = TRUE),
+                     outputs = out)
 
   # define weights to be equal to 1 if not given
   if(is.null(weights)) weights <- 1

@@ -401,7 +401,7 @@ get_special <- function(term, specials)
 predict_gam_handler <- function(object, newdata)
 {
 
-  if(is.list(object) && length(object)==1) return(PredictMat(object[[1]], newdata))
+  if(is.list(object) && length(object)==1) return(PredictMat(object[[1]], as.data.frame(newdata)))
   return(lapply(object, function(obj) PredictMat(obj, newdata)))  
   
 }
