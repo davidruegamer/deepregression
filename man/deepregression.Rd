@@ -9,12 +9,13 @@ deepregression(
   list_of_formulas,
   list_of_deep_models,
   family = "normal",
-  train_together = list(),
   data,
   tf_seed = as.integer(1991 - 5 - 4),
   return_prepoc = FALSE,
   subnetwork_builder = subnetwork_init,
   model_builder = keras_dr,
+  fitting_function = utils::getFromNamespace("fit.keras.engine.training.Model",
+    "keras"),
   smooth_options = smooth_control(),
   orthog_options = orthog_control(),
   ...
@@ -43,14 +44,6 @@ See the examples for more details.}
 possible distribution and parameters, see \code{\link{make_tfd_dist}}. Can also 
 be a custom distribution}
 
-\item{train_together}{a list of formulas of the same length as \code{list_of_formulas}
-specifying the deep predictors that should be trained together and then the results are;
-fed into different distribution parameters; use the same name for the deep predictor to
-indicate for which distribution parameter they should be used. For example, if the second
-and fourth list entry are \code{~ lstm_mod(text)} then the jointly learned \code{lstm_mod}
-network is added to the linear predictor of the second and fourth distribution parameter.
-Those network names should then be excluded from the \code{list_of_formulas}}
-
 \item{data}{data.frame or named list with input features}
 
 \item{tf_seed}{a seed for tensorflow (only works with R version >= 2.2.0)}
@@ -63,6 +56,9 @@ per default \code{subnetwork_init})}
 \item{model_builder}{function to build the model based on additive predictors (per default \code{keras_dr}).
 In order to work with the methods defined for the class \code{deepregression}, the model should behave
 like a keras model}
+
+\item{fitting_function}{function to fit the instantiated model when calling \code{fit}. Per default
+the keras \code{fit} function.}
 
 \item{...}{further arguments passed to the \code{model_builder} function}
 }
@@ -92,9 +88,19 @@ mod <- deepregression(
 )
 
 # train for more than 10 epochs to get a better model
-mod \%>\% train(epochs = 10, early_stopping = TRUE)
-mod \%>\% fitted()
-mod \%>\% plot()
+mod \%>\% fit(epochs = 10, early_stopping = TRUE)
+mod \%>\% fitted() \%>\% head()
+cvres <- mod \%>\% cv()
+mod \%>\% get_partial_effect(name = "s(xa)")
 mod \%>\% coef()
+mod \%>\% plot()
+
+mod <- deepregression(
+  list_of_formulas = list(loc = ~ 1 + s(xa) + x1, scale = ~ 1, 
+                          dummy = ~ -1 + deep_model(x1,x2,x3) \%OZ\% 1),
+  data = data, y = y,
+  list_of_deep_models = list(deep_model = deep_model),
+  mapping = list(1,2,1:2)
+)
 
 }

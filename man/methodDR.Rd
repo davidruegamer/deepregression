@@ -3,7 +3,6 @@
 \name{plot.deepregression}
 \alias{plot.deepregression}
 \alias{predict.deepregression}
-\alias{predict.deeptrafo}
 \alias{fitted.deepregression}
 \alias{fit.deepregression}
 \alias{coef.deepregression}
@@ -14,15 +13,7 @@
 \alias{quantile.deepregression}
 \title{Generic functions for deepregression models}
 \usage{
-\method{plot}{deepregression}(
-  x,
-  which = NULL,
-  which_param = 1,
-  plot = TRUE,
-  use_posterior = FALSE,
-  grid_length = 40,
-  ...
-)
+\method{plot}{deepregression}(x, which = NULL, which_param = 1, plot = TRUE, grid_length = 40, ...)
 
 \method{predict}{deepregression}(
   object,
@@ -33,8 +24,6 @@
   dtype = "float32",
   ...
 )
-
-\method{predict}{deeptrafo}(object, newdata = NULL, which = NULL, cast_float = FALSE, ...)
 
 \method{fitted}{deepregression}(object, apply_fun = tfd_mean, ...)
 
@@ -54,7 +43,7 @@
   ...
 )
 
-\method{coef}{deepregression}(object, variational = FALSE, params = NULL, type = NULL, ...)
+\method{coef}{deepregression}(object, which_param = 1, type = NULL)
 
 \method{print}{deepregression}(x, ...)
 
@@ -64,7 +53,7 @@ cv(
   patience = 20,
   plot = TRUE,
   print_folds = TRUE,
-  cv_folds = NULL,
+  cv_folds = 5,
   stop_if_nan = TRUE,
   mylapply = lapply,
   save_weights = FALSE,
@@ -81,19 +70,10 @@ cv(
 \arguments{
 \item{x}{a deepregression object}
 
-\item{which}{which effect to plot, default selects all.}
-
-\item{which_param}{integer of length 1.
-Corresponds to the distribution parameter for
-which the effects should be plotted.}
+\item{which_param}{integer, indicating for which distribution parameter
+coefficients should be returned (default is first parameter)}
 
 \item{plot}{whether to plot the resulting losses in each fold}
-
-\item{use_posterior}{logical; if \code{TRUE} it is assumed that
-the strucuted_nonlinear layer has stored a list of length two
-as weights, where the first entry is a vector of mean and sd
-for each network weight. The sd is transformed using the \code{exp} function.
-The plot then shows the mean curve +- 2 times sd.}
 
 \item{grid_length}{the length of an equidistant grid at which a two-dimensional function
 is evaluated for plotting.}
@@ -130,19 +110,13 @@ per default \code{as.matrix}}
 
 \item{convertfun}{function to convert R into Tensor object}
 
-\item{variational}{logical, if TRUE, the function takes into account
-that coefficients have both a mean and a variance}
-
-\item{params}{integer, indicating for which distribution parameter
-coefficients should be returned (default is all parameters)}
-
 \item{type}{either NULL (all types of coefficients are returned),
 "linear" for linear coefficients or "smooth" for coefficients of 
 smooth terms}
 
 \item{print_folds}{whether to print the current fold}
 
-\item{cv_folds}{see \code{deepregression}}
+\item{cv_folds}{an integer if list with train and test data sets}
 
 \item{stop_if_nan}{logical; whether to stop CV if NaN values occur}
 
@@ -152,13 +126,11 @@ smooth terms}
 
 \item{probs}{the quantile value(s)}
 
+\item{name}{which effect to plot as character; default plots all}
+
 \item{auc_callback}{logical, whether to use a callback for AUC}
 }
 \value{
-returns a function with two parameters: the actual response
-and \code{type} in \code{c('trafo', 'pdf', 'cdf', 'interaction')}
-determining the returned value
-
 Returns an object \code{drCV}, a list, one list element for each fold
 containing the model fit and the \code{weighthistory}.
 }
@@ -166,8 +138,6 @@ containing the model fit and the \code{weighthistory}.
 Generic functions for deepregression models
 
 Predict based on a deepregression object
-
-Predict based on a deeptrafo object
 
 Function to extract fitted distribution
 

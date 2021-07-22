@@ -237,6 +237,7 @@ deepregression <- function(
 #'
 #' @param list_pred_param list of input-output(-lists) generated from
 #' \code{subnetwork_init}
+#' @param family see \code{?deepregression}
 #' @param mapping a list of integers. The i-th list item defines which element
 #' elements of \code{list_pred_param} are used for the i-th parameter.
 #' For example, \code{map = list(1,2,1:2)} means that \code{list_pred_param[[1]]}
@@ -244,7 +245,7 @@ deepregression <- function(
 #' the second distribution parameter and  \code{list_pred_param[[3]]} for both
 #' distribution parameters (and then added once to \code{list_pred_param[[1]]} and
 #' once to \code{list_pred_param[[2]]})
-#' @param family see \code{?deepregression}
+#' @param add_layer_shared_pred layer to extend shared layers defined in \code{mapping}
 #' @return a list with input tensors and output tensors that can be passed
 #' to, e.g., \code{keras_model}
 #'
@@ -252,7 +253,9 @@ deepregression <- function(
 from_preds_to_dist <- function(
   list_pred_param,
   family,
-  mapping = NULL
+  mapping = NULL,
+  add_layer_shared_pred = function(x, units) layer_dense(x, units = units, 
+                                                         use_bias = FALSE)
 )
 {
   
@@ -262,10 +265,30 @@ from_preds_to_dist <- function(
     list_pred_param <- list()
     nr_params <- max(unlist(mapping)) 
     
+    if(!is.null(add_layer_shared_pred)){
+      
+      len_map <- sapply(mapping, length)
+      multiple_param <- which(len_map>1)
+      
+      for(ind in multiple_param){
+        # add units
+        lpp[[ind]] <- tf$split(
+          lpp[[ind]] %>% add_layer_shared_pred(units = len_map[ind]),
+          len_map[ind],
+          axis=1L
+          )
+        
+      }
+      
+      lpp <- unlist(lpp, recursive = FALSE)
+      mapping <- as.list(unlist(mapping))
+       
+    }
+    
     for(i in 1:nr_params){
       list_pred_param[[i]] <- layer_add_identity(lpp[which(sapply(mapping, function(mp) i %in% mp))])
     }
-    
+
     if(!is.null(names(lpp))) names(list_pred_param) <- names(lpp)[1:nr_params]
     
   }else{

@@ -10,7 +10,9 @@ keras_dr(
   weights = NULL,
   ind_fun = function(x) tfd_independent(x),
   optimizer = tf$keras$optimizers$Adam(),
-  monitor_metrics = list()
+  model_fun = keras_model,
+  monitor_metrics = list(),
+  ...
 )
 }
 \arguments{
@@ -27,6 +29,10 @@ log-likelihood. Per default independence is assumed by applying \code{tfd_indepe
 \item{optimizer}{optimizer used. Per default Adam}
 
 \item{monitor_metrics}{Further metrics to monitor}
+
+\item{model_instance}{which class of model to use (default \code{keras_model})}
+
+\item{arguments}{passed to other functions}
 }
 \value{
 a list with input tensors and output tensors that can be passed
