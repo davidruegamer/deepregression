@@ -37,9 +37,9 @@ make_generator <- function(data_image, data_tab, batch_size,
     this_ind <- 0
     i <- 1
     
-    while(all(this_ind<ldt)){
+    while(all(this_ind<ldt-2)){
       
-      this_ind <- unique(pmin((i-1)*2 + 1:2, ldt))
+      this_ind <- unique(pmin((i-1)*2 + 1:2, ldt-2))
       
       if(length(this_ind)>1 & i==1){
 

@@ -981,7 +981,7 @@ nestNCOL <- function(x)
   res <- list()
   for(i in 1:length(x)){
 
-    if(is.list(x[[i]]) & length(x[[i]])>=1 & !is.null(x[[i]][[1]])){
+    if(is.list(x[[i]]) & length(x[[i]])>=1 & any(!sapply(x[[i]], is.null))){
       res[[i]] <- nestNCOL(x[[i]])
     }else if((is.list(x[[i]]) & length(x[[i]])==0) | is.null(x[[i]][[1]])){
       res[[i]] <- 0
