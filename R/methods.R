@@ -506,7 +506,7 @@ predict.deeptrafo <- function(
   }
 
   # TODO: make prediction possible for one observation only; fix type mismatch pdf grid
-  trafo_fun <- function(y, type = c("trafo", "pdf", "cdf", "interaction", "shift", "output", "sample"),
+  trafo_fun <- function(y, type = c("trafo", "pdf", "cdf", "interaction", "shift", "output"),
                         which = NULL, grid = FALSE, batch_size = NULL)
   {
     type <- match.arg(type)
@@ -516,7 +516,7 @@ predict.deeptrafo <- function(
     ay <- tf$cast(object$init_params$y_basis_fun(y), tf$float32)
     aPrimey <- tf$cast(object$init_params$y_basis_fun_prime(y), tf$float32)
     inpCov[length(inpCov)-c(1,0)] <- list(ay, aPrimey)
-    mod_output <- evaluate.deeptrafo(object, inpCov, y, image_data, batch_size = batch_size)
+    mod_output <- evaluate.deeptrafo(object, inpCov, image_data, batch_size = batch_size)
     if(type=="output") return(mod_output)
     w_eta <- mod_output[, 1, drop = FALSE]
     aTtheta <- mod_output[, 2, drop = FALSE]
@@ -587,8 +587,7 @@ predict.deeptrafo <- function(
                    grid_pdf = ((tfd_normal(0,1) %>% tfd_prob(grid_eval) %>%
                                   as.matrix)*as.matrix(grid_prime_eval)),
                    grid_cdf = (tfd_normal(0,1) %>% tfd_cdf(grid_eval) %>%
-                                 as.matrix),
-                   sample
+                                 as.matrix)
     )
 
     return(ret)
@@ -599,13 +598,13 @@ predict.deeptrafo <- function(
 
 }
 
-evaluate.deeptrafo <- function(object, newdata, y, data_image, batch_size = NULL)
+evaluate.deeptrafo <- function(object, newdata, data_image, batch_size = NULL)
 {
   
   
   if(length(object$init_params$image_var)>0){
     
-    data_tab <- list(newdata, tf$cast(matrix(y, ncol=1), tf$float32))
+    data_tab <- newdata #list(newdata, tf$cast(matrix(y, ncol=1), tf$float32))
     
     # prepare generator
     max_data <- NROW(data_image)
@@ -628,7 +627,7 @@ evaluate.deeptrafo <- function(object, newdata, y, data_image, batch_size = NULL
     
     if(is.null(batch_size)){
       
-      mod_output <- object$model(list(newdata, tf$cast(matrix(y, ncol=1), tf$float32)))
+      mod_output <- object$model(newdata)
     
     }else{
       
@@ -638,8 +637,10 @@ evaluate.deeptrafo <- function(object, newdata, y, data_image, batch_size = NULL
         mod_output <- lapply(1:steps_per_epoch, 
                              function(i){
                                index <- (i-1)*batch_size + 1:batch_size
-                               object$model(list(lapply(newdata, function(x) subset_array(x, index)), 
-                                            tf$cast(matrix(y[index], ncol=1), tf$float32)))
+                               object$model(#list(
+                                 lapply(newdata, function(x) subset_array(x, index))#, 
+                                            #tf$cast(matrix(y[index], ncol=1), tf$float32))
+                                 )
                              })
         mod_output <- do.call("rbind", lapply(mod_output, as.matrix))
     
