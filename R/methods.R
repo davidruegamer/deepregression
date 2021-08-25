@@ -725,7 +725,8 @@ fit.deepregression <- function(
   }
   if(early_stopping & length(callbacks)==0)
     callbacks <- append(callbacks,
-                        callback_early_stopping(patience = patience))
+                        callback_early_stopping(patience = patience,
+                                                restore_best_weights = TRUE))
   
   is_trafo = x$init_params$family=="transformation_model"
 
