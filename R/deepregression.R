@@ -548,8 +548,8 @@ deepregression <- function(
     
     if(nr_params==3){
       
-      pos_lags <- sum(sapply(parsed_formulae_contents, function(x) (
-        !is.null(x$deepterms))*1 + !is.null(x$linterms)))
+      pos_lags <- sum(sapply(parsed_formulae_contents, function(x)
+        length(x$deepterms) + !is.null(x$linterms)))
       intercept_form <- "(Intercept)" %in% names(parsed_formulae_contents[[3]]$linterms)
       atm_lags <- ncol(input_cov[[pos_lags]])-intercept_form
       
@@ -557,7 +557,7 @@ deepregression <- function(
                                       function(i)y_basis_fun(input_cov[[pos_lags]][,i+intercept_form]))
       input_cov <- unlist_order_preserving(input_cov)
       if(!is.null(validation_data)){
-        validation_data[[1]][[3]] <-
+        validation_data[[1]][[pos_lags]] <-
           lapply(1:(ncol(validation_data[[1]][[pos_lags]])-intercept_form), 
                  function(i)y_basis_fun(validation_data[[1]][[pos_lags]][,i+intercept_form]))
         validation_data[[1]] <- unlist_order_preserving(validation_data[[1]])
@@ -1890,7 +1890,7 @@ deeptransformation_init <- function(
       atm_toplayer <- function(x){ x %>% layer_dense(1) }
     
     aTtheta_lags <- if(length(aTtheta_lags)==1) aTtheta_lags[[1]] else layer_concatenate(aTtheta_lags)
-    final_eta_pred <- final_eta_pred + (aTtheta_lags %>% atm_toplayer)
+    final_eta_pred <- layer_add(list(final_eta_pred, (aTtheta_lags %>% atm_toplayer)))
     
   } # SATs end
 
