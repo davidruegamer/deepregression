@@ -483,6 +483,22 @@ predict.deeptrafo <- function(
     # preprocess data
     if(is.data.frame(newdata)) newdata <- as.list(newdata)
     inpCov <- prepare_data(object, newdata, pred=TRUE)
+    # add step for lags
+    if(length(object$init_params$list_of_formulae)==3){
+      
+      pos_lags <- sum(sapply(object$init_params$parsed_formulae_contents, function(x)
+        length(x$deepterms) + !is.null(x$linterms)))
+      intercept_form <- "(Intercept)" %in% names(
+        object$init_params$parsed_formulae_contents[[3]]$linterms)
+      atm_lags <- ncol(inpCov[[pos_lags]])-intercept_form
+      
+      inpCov[[pos_lags]] <- lapply(1:atm_lags, 
+                                      function(i)
+                                        object$init_params$y_basis_fun(
+                                          inpCov[[pos_lags]][,i+intercept_form]))
+      inpCov <- unlist_order_preserving(inpCov)
+      
+    }
     if(cast_float) inpCov <- lapply(inpCov, function(x) tf$constant(x, dtype = "float32"))
     if(length(inpCov)==2 && !is.null(names(inpCov)) && names(inpCov)[2]=="minval")
     {
