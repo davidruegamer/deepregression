@@ -7,9 +7,11 @@
 
 # Installation
 
+**NOTE:** There is a new version of the package available at [https://github.com/neural-structured-additive-learning/deepregression](https://github.com/neural-structured-additive-learning/deepregression). Please use this one!
+
 To install the package, use the following command:
 ``` r
-devtools::install_github("davidruegamer/deepregression")
+devtools::install_github("neural-structured-additive-learning/deepregression/deepregression")
 ```
 Note that the installation requires additional packages (see below) and their installation is currently forced by `deepregression`.
 
