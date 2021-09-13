@@ -333,3 +333,33 @@ calculate_log_score <- function(x, output)
   )
   
 }
+
+eval_bsp_tf <- function(order, supp) {
+  
+  return(
+    function(y){
+      y <- tf$math$divide(tf$math$subtract(y, supp[1L]), tf$math$subtract(supp[2L],supp[1L]))
+      return(
+        layer_concatenate(
+          lapply(0:order, function(m) 
+            tf$reshape(
+              tf$divide(tfd_beta(m + 1, order + 1 - m)$prob(y), (order + 1)),
+              c(-1L,1L)
+            )
+          ), axis = 1L)
+      )
+    }
+  )
+  
+}
+
+ar_lags_layer <- function(order, supp)
+{
+  
+  bsp_layer <- eval_bsp_tf(order = order, supp = supp)
+  
+  return(
+    function(lags) lapply(lags, bsp_layer)
+  )
+  
+}

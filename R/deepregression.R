@@ -551,16 +551,14 @@ deepregression <- function(
       pos_lags <- sum(sapply(parsed_formulae_contents, function(x)
         length(x$deepterms) + !is.null(x$linterms)))
       intercept_form <- "(Intercept)" %in% names(parsed_formulae_contents[[3]]$linterms)
-      atm_lags <- ncol(input_cov[[pos_lags]])-intercept_form
-      
-      input_cov[[pos_lags]] <- lapply(1:atm_lags, 
-                                      function(i)y_basis_fun(input_cov[[pos_lags]][,i+intercept_form]))
-      input_cov <- unlist_order_preserving(input_cov)
-      if(!is.null(validation_data)){
+      if(intercept_form)
+        input_cov[[pos_lags]] <- input_cov[[pos_lags]][,-1]
+      atm_lags <- ncol(input_cov[[pos_lags]])
+      # 
+      # # input_cov <- unlist_order_preserving(input_cov)
+      if(!is.null(validation_data) & intercept_form){
         validation_data[[1]][[pos_lags]] <-
-          lapply(1:(ncol(validation_data[[1]][[pos_lags]])-intercept_form), 
-                 function(i)y_basis_fun(validation_data[[1]][[pos_lags]][,i+intercept_form]))
-        validation_data[[1]] <- unlist_order_preserving(validation_data[[1]])
+          validation_data[[1]][[pos_lags]][,-1]
       }
       
       ncol_structured <- ncol_structured[1:2]
@@ -585,6 +583,7 @@ deepregression <- function(
       n_obs = n_obs,
       ncol_structured = ncol_structured,
       ncol_deep = ncol_deep,
+      support = range(y),
       list_structured = list_structured,
       list_deep = list_of_deep_models,
       orthogX = orthogX,
@@ -1545,6 +1544,7 @@ deeptransformation_init <- function(
   ncol_deep,
   list_structured,
   list_deep,
+  support,
   lambda_lasso=NULL,
   lambda_ridge=NULL,
   weights = NULL,
@@ -1620,10 +1620,20 @@ deeptransformation_init <- function(
   # inputs for BSP trafo of Y, both n x tilde{M}
   input_theta_y <- layer_input(shape = list(order_bsp+1L))
   input_theta_y_prime <- layer_input(shape = list(order_bsp+1L))
-  if(atm_lags) input_theta_atm <- lapply(1:atm_lags, function(x) 
-    layer_input(shape = list(as.integer((order_bsp+1L))))) else
-      input_theta_atm <- NULL
-
+  if(atm_lags){ 
+    
+    arlags <- ar_lags_layer(order_bsp, support)
+    input_theta_atm <- layer_input(shape = list(as.integer(atm_lags)))
+    input_atm_bsp <- 
+      tf$split(input_theta_atm,
+               num_or_size_splits = as.integer(atm_lags),
+               axis = 1L) %>% 
+      arlags
+    
+  }else{
+      input_theta_atm <- input_atm_bsp <- NULL
+  }
+  
   structured_parts <- vector("list", 2)
 
   # define structured predictor
@@ -1857,7 +1867,7 @@ deeptransformation_init <- function(
     # if h1 is given, transform F_{t-1} using h1
     if(!is.null(interact_pred_trafo)){
       
-     rho_parts <- lapply(input_theta_atm, function(inp) 
+     rho_parts <- lapply(input_atm_bsp, function(inp) 
        tf_row_tensor_right_part(inp, interact_pred) %>%
         thetas_layer() %>%
         layer_lambda(f = interact_pred_trafo))
@@ -1876,7 +1886,7 @@ deeptransformation_init <- function(
     }else{ 
 
       ## thetas
-      AoBs <- lapply(input_theta_atm, function(inp) 
+      AoBs <- lapply(input_atm_bsp, function(inp) 
         tf_row_tensor(inp, interact_pred))
       
       aTtheta_lags <- lapply(AoBs, function(aob) aob %>% thetas_layer())
@@ -1954,7 +1964,7 @@ deeptransformation_init <- function(
     inputs_struct[!sapply(inputs_struct, is.null)]))
   
   if(!is.null(input_theta_atm))
-    inputList <- unname(c(inputList, input_theta_atm))
+    inputList <- unname(c(inputList, list(input_theta_atm)))
   
   inputList <- unname(c(inputList, 
                         unlist(ox[!sapply(ox, is.null)]),
