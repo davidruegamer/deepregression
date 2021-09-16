@@ -553,7 +553,7 @@ deepregression <- function(
       intercept_form <- "(Intercept)" %in% names(parsed_formulae_contents[[3]]$linterms)
       if(intercept_form)
         input_cov[[pos_lags]] <- input_cov[[pos_lags]][,-1]
-      atm_lags <- ncol(input_cov[[pos_lags]])
+      atm_lags <- NCOL(input_cov[[pos_lags]])
       # 
       # # input_cov <- unlist_order_preserving(input_cov)
       if(!is.null(validation_data) & intercept_form){
